@@ -108,6 +108,16 @@ public static class ModelPrefabUtil
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    public static void SetArray(Object target, string field, Object[] values)
+    {
+        var so = new SerializedObject(target);
+        var p = so.FindProperty(field);
+        if (p == null || !p.isArray) { Debug.LogError($"[ModelPrefabUtil] No array '{field}' on {target.GetType().Name}"); return; }
+        p.arraySize = values.Length;
+        for (int i = 0; i < values.Length; i++) p.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
     public static void SetBool(Object target, string field, bool value)
     {
         var so = new SerializedObject(target);

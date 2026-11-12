@@ -18,6 +18,8 @@ public class CarLoadout : MonoBehaviour
     [SerializeField] GameObject smallBlasterVisual;
     [SerializeField] GameObject jackpotBlasterVisual;
     [SerializeField] Transform mount;
+    [Tooltip("Roof rack + luggage parts of the car model. Shown when unarmed, hidden while a blaster is mounted.")]
+    [SerializeField] GameObject[] roofCargo;
 
     public BlasterTier Tier { get; private set; }
     public float BlasterBar { get; private set; }
@@ -94,5 +96,8 @@ public class CarLoadout : MonoBehaviour
     {
         if (smallBlasterVisual != null) smallBlasterVisual.SetActive(Tier == BlasterTier.Small);
         if (jackpotBlasterVisual != null) jackpotBlasterVisual.SetActive(Tier == BlasterTier.Jackpot);
+        if (roofCargo != null)
+            foreach (var part in roofCargo)
+                if (part != null) part.SetActive(!IsArmed);
     }
 }
