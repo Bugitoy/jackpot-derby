@@ -47,3 +47,7 @@ crashlytics-build.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# MCP editor screenshots
+/Assets/Screenshots/
+/Assets/Screenshots.meta
