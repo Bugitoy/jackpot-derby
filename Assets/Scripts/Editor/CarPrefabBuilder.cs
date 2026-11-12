@@ -31,6 +31,8 @@ public static class CarPrefabBuilder
         var model = ModelPrefabUtil.PlaceModel(modelPath, visual, TargetLength);
         if (model == null) { Object.DestroyImmediate(root); return null; }
         Bounds b = ModelPrefabUtil.LocalBounds(model, root.transform);
+        Vector3 roofCentre = HideRoofCargo(model, b);
+        Bounds body = ModelPrefabUtil.LocalBounds(model, root.transform);
 
         var rb = root.AddComponent<Rigidbody>();
         rb.mass = 1000f;
@@ -53,7 +55,7 @@ public static class CarPrefabBuilder
         // Roof mount for blasters (barrels on the models point along -X, so turn them +90°).
         var mount = new GameObject("BlasterMount").transform;
         mount.SetParent(visual, false);
-        mount.localPosition = new Vector3(0f, b.max.y - 0.3f, -0.35f);
+        mount.localPosition = new Vector3(0f, body.max.y - 0.08f, roofCentre.z);
         var small = BlasterVisual("BlasterSmall", "Assets/Models/blaster_small.glb", mount, SmallBlasterSize);
         var jackpot = BlasterVisual("BlasterJackpot", "Assets/Models/blaster_jackpot.glb", mount, JackpotBlasterSize);
 
@@ -77,6 +79,29 @@ public static class CarPrefabBuilder
         Object.DestroyImmediate(root);
         Debug.Log($"[CarPrefabBuilder] {path}: size {b.size}");
         return prefab;
+    }
+
+    /// <summary>
+    /// The Tripo car models come in parts; the roof rack and luggage are separate parts that start
+    /// high up (above ~2/3 of the car's height). Hide them so the blaster sits on the roof itself.
+    /// Returns the centre of the hidden cargo (where the blaster goes).
+    /// </summary>
+    static Vector3 HideRoofCargo(GameObject model, Bounds total)
+    {
+        float cutY = total.min.y + total.size.y * 0.66f;
+        Renderer biggest = null;
+        foreach (var r in model.GetComponentsInChildren<Renderer>())
+            if (biggest == null || r.bounds.size.sqrMagnitude > biggest.bounds.size.sqrMagnitude) biggest = r;
+
+        Bounds cargo = default;
+        bool any = false;
+        foreach (var r in model.GetComponentsInChildren<Renderer>())
+        {
+            if (r == biggest || r.bounds.min.y < cutY) continue;
+            if (!any) { cargo = r.bounds; any = true; } else cargo.Encapsulate(r.bounds);
+            r.gameObject.SetActive(false);
+        }
+        return any ? cargo.center : new Vector3(0f, 0f, -0.3f);
     }
 
     static GameObject BlasterVisual(string name, string modelPath, Transform mount, float size)
