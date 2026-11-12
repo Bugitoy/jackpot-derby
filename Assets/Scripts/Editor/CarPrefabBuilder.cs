@@ -10,6 +10,9 @@ public static class CarPrefabBuilder
 {
     public const string PlayerPrefabPath = "Assets/Prefabs/Cars/PlayerCar.prefab";
     const float TargetLength = 4f;
+    // Longest side of each roof blaster, in units (the car is 4 long, ~2.5 wide).
+    public static float SmallBlasterSize = 1.4f;
+    public static float JackpotBlasterSize = 1.7f;
 
     [MenuItem("Jackpot Derby/Build Car Prefabs")]
     public static void BuildAll()
@@ -50,9 +53,9 @@ public static class CarPrefabBuilder
         // Roof mount for blasters (barrels on the models point along -X, so turn them +90°).
         var mount = new GameObject("BlasterMount").transform;
         mount.SetParent(visual, false);
-        mount.localPosition = new Vector3(0f, b.max.y - 0.55f, -0.35f);
-        var small = BlasterVisual("BlasterSmall", "Assets/Models/blaster_small.glb", mount, 2.4f);
-        var jackpot = BlasterVisual("BlasterJackpot", "Assets/Models/blaster_jackpot.glb", mount, 2.9f);
+        mount.localPosition = new Vector3(0f, b.max.y - 0.3f, -0.35f);
+        var small = BlasterVisual("BlasterSmall", "Assets/Models/blaster_small.glb", mount, SmallBlasterSize);
+        var jackpot = BlasterVisual("BlasterJackpot", "Assets/Models/blaster_jackpot.glb", mount, JackpotBlasterSize);
 
         root.AddComponent<CarMotor>();
         root.AddComponent<CarVisualTilt>();
