@@ -33,6 +33,7 @@ public class CarMotor : MonoBehaviour
 
     Rigidbody rb;
     CarInputSource input;
+    float stunTimer;
 
     /// <summary>Signed speed along the car's nose (negative = reversing).</summary>
     public float ForwardSpeed { get; private set; }
@@ -69,8 +70,13 @@ public class CarMotor : MonoBehaviour
 
         if (!IsGrounded) { ForwardSpeed = f; return; }
 
-        float throttle = InputEnabled && input != null ? Mathf.Clamp(input.Throttle, -1f, 1f) : 0f;
-        float steer = InputEnabled && input != null ? Mathf.Clamp(input.Steer, -1f, 1f) : 0f;
+        // While knocked back, ignore the driver and slide (low grip).
+        bool stunned = stunTimer > 0f;
+        if (stunned) stunTimer -= dt;
+        bool canDrive = InputEnabled && input != null && !stunned;
+        float throttle = canDrive ? Mathf.Clamp(input.Throttle, -1f, 1f) : 0f;
+        float steer = canDrive ? Mathf.Clamp(input.Steer, -1f, 1f) : 0f;
+        float gripNow = grip * GripMultiplier * (stunned ? 0.15f : 1f);
         float top = maxSpeed * SpeedMultiplier;
 
         if (throttle > 0.01f)
@@ -92,7 +98,7 @@ public class CarMotor : MonoBehaviour
             f = Mathf.MoveTowards(f, 0f, coastDeceleration * dt);
         }
 
-        s = Mathf.Lerp(s, 0f, 1f - Mathf.Exp(-grip * GripMultiplier * dt));
+        s = Mathf.Lerp(s, 0f, 1f - Mathf.Exp(-gripNow * dt));
         rb.linearVelocity = fwd * f + right * s + Vector3.up * Mathf.Min(v.y, 0f);
         ForwardSpeed = f;
 
@@ -105,6 +111,14 @@ public class CarMotor : MonoBehaviour
         float targetYaw = steer * turnRate * Mathf.Deg2Rad * lowSpeed * highSpeed * dir;
         float yaw = Mathf.Lerp(rb.angularVelocity.y, targetYaw, 1f - Mathf.Exp(-yawResponse * dt));
         rb.angularVelocity = new Vector3(0f, yaw, 0f);
+    }
+
+    /// <summary>Shove the car (chest bounce, rams, blasts). It slides without driver control for stunTime.</summary>
+    public void ApplyKnockback(Vector3 velocityChange, float stunTime)
+    {
+        velocityChange.y = 0f;
+        rb.AddForce(velocityChange, ForceMode.VelocityChange);
+        stunTimer = Mathf.Max(stunTimer, stunTime);
     }
 
     /// <summary>Swap who's driving (player keyboard, AI, or a test script).</summary>

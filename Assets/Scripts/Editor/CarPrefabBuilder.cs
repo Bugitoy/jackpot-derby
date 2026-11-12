@@ -2,8 +2,9 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Turns a car model into a drivable prefab: Rigidbody + one box collider on the root,
-/// the model under a "Visual" child (scaled to ~4 units long, sitting on the ground).
+/// Turns a car model into a drivable prefab: Rigidbody + capsule collider on the root,
+/// the model under a "Visual" child (scaled to ~4 units long, sitting on the ground),
+/// a roof mount with both blaster models (hidden until earned), and all the gameplay scripts.
 /// </summary>
 public static class CarPrefabBuilder
 {
@@ -13,32 +14,20 @@ public static class CarPrefabBuilder
     [MenuItem("Jackpot Derby/Build Car Prefabs")]
     public static void BuildAll()
     {
-        Build("PlayerCar", "Assets/Models/car.glb", true);
+        Build("PlayerCar", "Assets/Models/car.glb", "Lucky 7", new Color(0.15f, 0.70f, 0.70f), true);
         AssetDatabase.SaveAssets();
     }
 
-    public static GameObject Build(string name, string modelPath, bool player)
+    public static GameObject Build(string name, string modelPath, string displayName, Color color, bool player)
     {
-        var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
-        if (model == null) { Debug.LogError("[CarPrefabBuilder] Missing model " + modelPath); return null; }
-
-        EnsureFolder("Assets/Prefabs", "Cars");
+        ModelPrefabUtil.EnsureFolder("Assets/Prefabs/Cars");
         var root = new GameObject(name);
         var visual = new GameObject("Visual").transform;
         visual.SetParent(root.transform, false);
 
-        var inst = (GameObject)PrefabUtility.InstantiatePrefab(model);
-        inst.name = "Model";
-        inst.transform.SetParent(visual, false);
-        foreach (var col in inst.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(col);
-
-        // Scale so the longest horizontal side is TargetLength, then sit it on the ground, centred.
-        Bounds b = RendererBounds(inst);
-        float s = TargetLength / Mathf.Max(b.size.x, b.size.z);
-        inst.transform.localScale = Vector3.one * s;
-        b = RendererBounds(inst);
-        inst.transform.localPosition = new Vector3(-b.center.x, -b.min.y, -b.center.z);
-        b = RendererBounds(inst);
+        var model = ModelPrefabUtil.PlaceModel(modelPath, visual, TargetLength);
+        if (model == null) { Object.DestroyImmediate(root); return null; }
+        Bounds b = ModelPrefabUtil.LocalBounds(model, root.transform);
 
         var rb = root.AddComponent<Rigidbody>();
         rb.mass = 1000f;
@@ -58,8 +47,26 @@ public static class CarPrefabBuilder
         capsule.center = new Vector3(0f, radius, 0f);
         capsule.sharedMaterial = CarPhysicsMaterial();
 
+        // Roof mount for blasters (barrels on the models point along -X, so turn them +90°).
+        var mount = new GameObject("BlasterMount").transform;
+        mount.SetParent(visual, false);
+        mount.localPosition = new Vector3(0f, b.max.y - 0.55f, -0.35f);
+        var small = BlasterVisual("BlasterSmall", "Assets/Models/blaster_small.glb", mount, 2.4f);
+        var jackpot = BlasterVisual("BlasterJackpot", "Assets/Models/blaster_jackpot.glb", mount, 2.9f);
+
         root.AddComponent<CarMotor>();
         root.AddComponent<CarVisualTilt>();
+        root.AddComponent<Odometer>();
+        root.AddComponent<CarHealth>();
+        var loadout = root.AddComponent<CarLoadout>();
+        ModelPrefabUtil.SetField(loadout, "smallBlasterVisual", small);
+        ModelPrefabUtil.SetField(loadout, "jackpotBlasterVisual", jackpot);
+        ModelPrefabUtil.SetField(loadout, "mount", mount);
+
+        var id = root.AddComponent<CarIdentity>();
+        id.displayName = displayName;
+        id.color = color;
+        id.isPlayer = player;
         if (player) root.AddComponent<PlayerCarInput>();
 
         string path = $"Assets/Prefabs/Cars/{name}.prefab";
@@ -69,9 +76,19 @@ public static class CarPrefabBuilder
         return prefab;
     }
 
+    static GameObject BlasterVisual(string name, string modelPath, Transform mount, float size)
+    {
+        var holder = new GameObject(name);
+        holder.transform.SetParent(mount, false);
+        ModelPrefabUtil.PlaceModel(modelPath, holder.transform, size, 90f);
+        // PlaceModel centres relative to the holder's world position; holder sits at the mount.
+        holder.SetActive(false);
+        return holder;
+    }
+
     static PhysicsMaterial CarPhysicsMaterial()
     {
-        EnsureFolder("Assets/Settings", "Physics");
+        ModelPrefabUtil.EnsureFolder("Assets/Settings/Physics");
         const string path = "Assets/Settings/Physics/CarBody.physicMaterial";
         var m = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(path);
         if (m == null) { m = new PhysicsMaterial("CarBody"); AssetDatabase.CreateAsset(m, path); }
@@ -82,18 +99,5 @@ public static class CarPrefabBuilder
         m.bounceCombine = PhysicsMaterialCombine.Maximum;
         EditorUtility.SetDirty(m);
         return m;
-    }
-
-    static Bounds RendererBounds(GameObject go)
-    {
-        var rs = go.GetComponentsInChildren<Renderer>();
-        Bounds b = rs.Length > 0 ? rs[0].bounds : new Bounds(go.transform.position, Vector3.zero);
-        foreach (var r in rs) b.Encapsulate(r.bounds);
-        return b;
-    }
-
-    static void EnsureFolder(string parent, string child)
-    {
-        if (!AssetDatabase.IsValidFolder(parent + "/" + child)) AssetDatabase.CreateFolder(parent, child);
     }
 }

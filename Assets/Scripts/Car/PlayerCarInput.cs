@@ -11,14 +11,19 @@ public class PlayerCarInput : CarInputSource
 
     float steer;
     float throttle;
+    Odometer odometer;
 
     public override float Throttle => throttle;
     public override float Steer => steer;
+
+    void Awake() => odometer = GetComponent<Odometer>();
 
     void Update()
     {
         var k = Keyboard.current;
         if (k == null) { throttle = 0f; steer = 0f; return; }
+
+        if (k.rKey.wasPressedThisFrame && odometer != null) odometer.Unlock();
 
         float t = 0f;
         if (k.wKey.isPressed || k.upArrowKey.isPressed) t += 1f;

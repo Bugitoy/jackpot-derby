@@ -10,8 +10,69 @@ public static class SceneSetup
     {
         ArenaBuilder.BuildArena();
         CarPrefabBuilder.BuildAll();
+        ChestPrefabBuilder.BuildAll();
         SetupPlayerCameraLight();
+        SetupGameSystems();
         EditorSceneManager.SaveOpenScenes();
+    }
+
+    [MenuItem("Jackpot Derby/Rebuild Prefabs + Systems (keep arena)")]
+    public static void RebuildPrefabsAndSystems()
+    {
+        CarPrefabBuilder.BuildAll();
+        ChestPrefabBuilder.BuildAll();
+        SetupPlayerCameraLight();
+        SetupGameSystems();
+        EditorSceneManager.SaveOpenScenes();
+    }
+
+    /// <summary>
+    /// Chunky HUD text: thick dark outline + drop shadow. Saved as an asset so the WebGL build keeps
+    /// the outline/shadow shader variant.
+    /// </summary>
+    static Material OutlinedFontMaterial()
+    {
+        const string path = "Assets/Materials/UI/HudText_Outlined.mat";
+        ModelPrefabUtil.EnsureFolder("Assets/Materials/UI");
+        var font = TMPro.TMP_Settings.defaultFontAsset;
+        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null)
+        {
+            m = new Material(font.material);
+            AssetDatabase.CreateAsset(m, path);
+        }
+        m.shader = font.material.shader;
+        m.SetTexture(TMPro.ShaderUtilities.ID_MainTex, font.material.GetTexture(TMPro.ShaderUtilities.ID_MainTex));
+        m.EnableKeyword(TMPro.ShaderUtilities.Keyword_Outline);
+        m.SetFloat(TMPro.ShaderUtilities.ID_FaceDilate, 0.15f);
+        m.SetFloat(TMPro.ShaderUtilities.ID_OutlineWidth, 0.22f);
+        m.SetColor(TMPro.ShaderUtilities.ID_OutlineColor, new Color(0.08f, 0.08f, 0.1f, 1f));
+        m.EnableKeyword(TMPro.ShaderUtilities.Keyword_Underlay);
+        m.SetColor(TMPro.ShaderUtilities.ID_UnderlayColor, new Color(0f, 0f, 0f, 0.6f));
+        m.SetFloat(TMPro.ShaderUtilities.ID_UnderlayOffsetX, 0.4f);
+        m.SetFloat(TMPro.ShaderUtilities.ID_UnderlayOffsetY, -0.5f);
+        m.SetFloat(TMPro.ShaderUtilities.ID_UnderlaySoftness, 0.2f);
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    /// <summary>The "GameSystems" object: chest spawner, HUD, debug cheats.</summary>
+    public static void SetupGameSystems()
+    {
+        var sys = GameObject.Find("GameSystems");
+        if (sys == null) sys = new GameObject("GameSystems");
+
+        var spawner = sys.GetComponent<ChestSpawner>();
+        if (spawner == null) spawner = sys.AddComponent<ChestSpawner>();
+        ModelPrefabUtil.SetField(spawner, "chestPrefab", AssetDatabase.LoadAssetAtPath<Chest>(ChestPrefabBuilder.ChestPath));
+        ModelPrefabUtil.SetField(spawner, "jackpotChestPrefab", AssetDatabase.LoadAssetAtPath<Chest>(ChestPrefabBuilder.JackpotPath));
+        ModelPrefabUtil.SetField(spawner, "grid", Object.FindAnyObjectByType<ArenaGrid>());
+
+        var hud = sys.GetComponent<Hud>();
+        if (hud == null) hud = sys.AddComponent<Hud>();
+        ModelPrefabUtil.SetField(hud, "outlinedText", OutlinedFontMaterial());
+        if (sys.GetComponent<DebugCheats>() == null) sys.AddComponent<DebugCheats>();
+        EditorSceneManager.MarkSceneDirty(sys.scene);
     }
 
     public static void SetupPlayerCameraLight()
