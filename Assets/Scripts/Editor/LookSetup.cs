@@ -59,21 +59,87 @@ public static class LookSetup
         vol.isGlobal = true;
         vol.sharedProfile = profile;
 
+        BuildStormVolume();
+
+        // Soft haze: the city fades into the sky colour instead of ending at a hard edge.
+        Color sky = new Color(0.66f, 0.76f, 0.84f);
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.Linear;
+        RenderSettings.fogColor = sky;
+        RenderSettings.fogStartDistance = 55f;
+        RenderSettings.fogEndDistance = 165f;
+
         var cam = Camera.main;
         if (cam != null)
         {
             var data = cam.GetUniversalAdditionalCameraData();
             data.renderPostProcessing = true;
             data.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
-            cam.backgroundColor = new Color(0.62f, 0.74f, 0.82f);
+            // The storm mist softens against the depth buffer.
+            data.requiresDepthOption = CameraOverrideOption.On;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = sky;
         }
 
-        // Shadows only as far as the high camera needs.
-        var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
-        if (urp != null) { urp.shadowDistance = 110f; EditorUtility.SetDirty(urp); }
+        // A reflection probe over the arena, rendered once at start, so shiny surfaces reflect the
+        // city and sky instead of the flat default.
+        var probeGo = GameObject.Find("ArenaReflectionProbe");
+        if (probeGo == null) probeGo = new GameObject("ArenaReflectionProbe");
+        probeGo.transform.position = new Vector3(0f, 6f, 0f);
+        var probe = probeGo.GetComponent<ReflectionProbe>();
+        if (probe == null) probe = probeGo.AddComponent<ReflectionProbe>();
+        probe.mode = ReflectionProbeMode.Realtime;
+        probe.refreshMode = ReflectionProbeRefreshMode.OnAwake;
+        probe.timeSlicingMode = ReflectionProbeTimeSlicingMode.NoTimeSlicing;
+        probe.size = new Vector3(400f, 80f, 340f);
+        probe.resolution = 128;
+        probe.boxProjection = false;
+        probe.clearFlags = ReflectionProbeClearFlags.SolidColor;
+        probe.backgroundColor = sky;
+        probe.intensity = 1f;
+
+        // The low chase camera sees detail up close: shorter shadow distance = crisper shadows.
+        foreach (var guid in AssetDatabase.FindAssets("t:UniversalRenderPipelineAsset", new[] { "Assets" }))
+        {
+            var urp = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(AssetDatabase.GUIDToAssetPath(guid));
+            if (urp == null) continue;
+            urp.shadowDistance = 70f;
+            EditorUtility.SetDirty(urp);
+        }
 
         EditorSceneManager.MarkSceneDirty(volGo.scene);
         AssetDatabase.SaveAssets();
+    }
+
+    const string StormProfilePath = "Assets/Settings/StormVolumeProfile.asset";
+
+    /// <summary>Gloomy grade faded in (weight 0..1) by StormController while the player is in the storm.</summary>
+    static void BuildStormVolume()
+    {
+        var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(StormProfilePath);
+        if (profile == null)
+        {
+            profile = ScriptableObject.CreateInstance<VolumeProfile>();
+            AssetDatabase.CreateAsset(profile, StormProfilePath);
+        }
+        var color = Get<ColorAdjustments>(profile);
+        color.saturation.Override(-35f);
+        color.postExposure.Override(-0.15f);
+        color.colorFilter.Override(new Color(0.86f, 0.86f, 1f));
+        var vig = Get<Vignette>(profile);
+        vig.intensity.Override(0.38f);
+        vig.smoothness.Override(0.6f);
+        vig.color.Override(new Color(0.10f, 0.08f, 0.18f));
+        EditorUtility.SetDirty(profile);
+
+        var go = GameObject.Find("StormVolume");
+        if (go == null) go = new GameObject("StormVolume");
+        var vol = go.GetComponent<Volume>();
+        if (vol == null) vol = go.AddComponent<Volume>();
+        vol.isGlobal = true;
+        vol.priority = 1f;
+        vol.weight = 0f;
+        vol.sharedProfile = profile;
     }
 
     static T Get<T>(VolumeProfile p) where T : VolumeComponent

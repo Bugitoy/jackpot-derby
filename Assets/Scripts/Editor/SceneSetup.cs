@@ -127,6 +127,10 @@ public static class SceneSetup
         }
         var chase = cam.GetComponent<ChaseCamera>();
         if (chase == null) chase = cam.gameObject.AddComponent<ChaseCamera>();
+        // Reset to the script's current defaults (old scene values would otherwise stick).
+        var fresh = new GameObject("tmp").AddComponent<ChaseCamera>();
+        EditorUtility.CopySerialized(fresh, chase);
+        Object.DestroyImmediate(fresh.gameObject);
         chase.target = player.transform;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = new Color(0.55f, 0.70f, 0.80f);

@@ -37,6 +37,10 @@ public class StormController : MonoBehaviour
     Transform[] walls = new Transform[4];
     Transform[] darkGround = new Transform[4];
     ParticleSystem[] clouds = new ParticleSystem[4];
+    ParticleSystem[] mist = new ParticleSystem[4];
+    [Tooltip("Desaturating volume faded in while the player is outside the zone (found by name if empty).")]
+    [SerializeField] UnityEngine.Rendering.Volume stormVolume;
+    static readonly int StormZoneId = Shader.PropertyToID("_StormZone");
     float damageTick;
 
     void Awake()
@@ -113,15 +117,24 @@ public class StormController : MonoBehaviour
 
     void BuildVisuals()
     {
+        if (stormVolume == null)
+        {
+            var vg = GameObject.Find("StormVolume");
+            if (vg != null) stormVolume = vg.GetComponent<UnityEngine.Rendering.Volume>();
+        }
+        if (stormVolume != null) stormVolume.weight = 0f;
+
         for (int i = 0; i < 4; i++)
         {
-            var w = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            // Vertical double-sided quad (the mist shader draws both faces).
+            var w = GameObject.CreatePrimitive(PrimitiveType.Quad);
             w.name = "StormWall" + i;
             Destroy(w.GetComponent<Collider>());
             w.transform.SetParent(transform, false);
             var wr = w.GetComponent<Renderer>();
             wr.sharedMaterial = wallMaterial;
             wr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            wr.receiveShadows = false;
             walls[i] = w.transform;
 
             var g = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -132,46 +145,69 @@ public class StormController : MonoBehaviour
             var gr = g.GetComponent<Renderer>();
             gr.sharedMaterial = groundMaterial;
             gr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            gr.receiveShadows = false;
             darkGround[i] = g.transform;
 
-            clouds[i] = MakeClouds(i);
+            clouds[i] = MakeClouds("StormClouds" + i, new Vector2(12f, 20f), new Vector2(6f, 9f), 110,
+                new Color(0.42f, 0.40f, 0.50f, 0.5f), new Color(0.20f, 0.19f, 0.27f, 0.55f));
+            mist[i] = MakeClouds("StormGroundMist" + i, new Vector2(6f, 10f), new Vector2(5f, 8f), 80,
+                new Color(0.55f, 0.53f, 0.62f, 0.32f), new Color(0.36f, 0.34f, 0.44f, 0.36f));
         }
     }
 
-    ParticleSystem MakeClouds(int i)
+    ParticleSystem MakeClouds(string name, Vector2 size, Vector2 life, int max, Color a, Color b)
     {
-        var go = new GameObject("StormClouds" + i);
+        var go = new GameObject(name);
         go.transform.SetParent(transform, false);
         var ps = go.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         var main = ps.main;
         main.loop = true;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 6f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 1.2f);
-        main.startSize = new ParticleSystem.MinMaxCurve(7f, 12f);
-        main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.22f, 0.12f, 0.3f, 0.75f), new Color(0.12f, 0.08f, 0.16f, 0.85f));
+        main.startLifetime = new ParticleSystem.MinMaxCurve(life.x, life.y);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.15f, 0.6f);
+        main.startSize = new ParticleSystem.MinMaxCurve(size.x, size.y);
+        main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+        main.startColor = new ParticleSystem.MinMaxGradient(a, b);
         main.simulationSpace = ParticleSystemSimulationSpace.World;
-        main.maxParticles = 140;
+        main.maxParticles = max;
+        var rot = ps.rotationOverLifetime;
+        rot.enabled = true;
+        rot.z = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+        var sz = ps.sizeOverLifetime;
+        sz.enabled = true;
+        sz.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.8f, 1f, 1.2f));
         var em = ps.emission;
-        em.rateOverTime = 20f;
+        em.rateOverTime = 10f;
         var shape = ps.shape;
         shape.shapeType = ParticleSystemShapeType.Box;
         var col = ps.colorOverLifetime;
         col.enabled = true;
         var grad = new Gradient();
         grad.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                     new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) });
+                     new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.3f), new GradientAlphaKey(1f, 0.65f), new GradientAlphaKey(0f, 1f) });
         col.color = grad;
         var r = go.GetComponent<ParticleSystemRenderer>();
         r.sharedMaterial = cloudMaterial;
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
         ps.Play();
         return ps;
+    }
+
+    void LateUpdate()
+    {
+        // Desaturate and darken the screen while the player is caught in the storm.
+        if (stormVolume == null) return;
+        var p = CarIdentity.Player;
+        var h = p != null ? p.GetComponent<CarHealth>() : null;
+        bool outside = h != null && h.IsAlive && !IsInside(p.transform.position, 0f);
+        stormVolume.weight = Mathf.MoveTowards(stormVolume.weight, outside ? 1f : 0f, Time.deltaTime * 1.5f);
     }
 
     void ApplyVisuals()
     {
         var z = Zone;
+        Shader.SetGlobalVector(StormZoneId, new Vector4(z.xMin, z.yMin, z.xMax, z.yMax));
         float far = 400f;
         // 0 north, 1 south, 2 east, 3 west.
         SetWall(0, new Vector3(z.center.x, 0f, z.yMax), new Vector3(z.width, 0f, 0f));
@@ -190,14 +226,23 @@ public class StormController : MonoBehaviour
     {
         float len = Mathf.Max(along.x, along.z);
         bool alongX = along.x > 0f;
-        walls[i].position = centre + Vector3.up * wallHeight / 2f;
-        walls[i].localScale = alongX ? new Vector3(len, wallHeight, 0.4f) : new Vector3(0.4f, wallHeight, len);
-        var shape = clouds[i].shape;
+        walls[i].SetPositionAndRotation(centre + Vector3.up * wallHeight / 2f, Quaternion.Euler(0f, alongX ? 0f : 90f, 0f));
+        walls[i].localScale = new Vector3(len, wallHeight, 1f);
+
+        // Clouds just outside the wall (i: 0 north, 1 south, 2 east, 3 west), ground mist hugging it.
+        Vector3 outward = i == 0 ? Vector3.forward : i == 1 ? Vector3.back : i == 2 ? Vector3.right : Vector3.left;
+        PlaceClouds(clouds[i], centre + outward * 3f + Vector3.up * 5f, alongX, len, new Vector2(4f, 8f), 0.08f, 14f);
+        PlaceClouds(mist[i], centre + outward * 1.5f + Vector3.up * 0.8f, alongX, len, new Vector2(1f, 4f), 0.06f, 10f);
+    }
+
+    static void PlaceClouds(ParticleSystem ps, Vector3 pos, bool alongX, float len, Vector2 hd, float perUnit, float maxRate)
+    {
+        ps.transform.position = pos;
+        var shape = ps.shape;
         shape.position = Vector3.zero;
-        clouds[i].transform.position = centre + Vector3.up * 3f;
-        shape.scale = alongX ? new Vector3(len, 4f, 6f) : new Vector3(6f, 4f, len);
-        var em = clouds[i].emission;
-        em.rateOverTime = Mathf.Clamp(len * 0.15f, 3f, 25f);
+        shape.scale = alongX ? new Vector3(len, hd.x, hd.y) : new Vector3(hd.y, hd.x, len);
+        var em = ps.emission;
+        em.rateOverTime = Mathf.Clamp(len * perUnit, 1.5f, maxRate);
     }
 
     void SetGround(int i, Vector3 centre, Vector2 size)

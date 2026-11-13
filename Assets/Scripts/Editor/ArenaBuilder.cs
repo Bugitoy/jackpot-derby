@@ -35,6 +35,10 @@ public static class ArenaBuilder
 
     static Dictionary<string, Material> mats;
     static System.Random rand;
+    /// <summary>Tunnel mouths found while laying roads: point on the edge line + direction into the arena.</summary>
+    static List<(Vector3 pos, Vector3 inward)> tunnels;
+    /// <summary>Where the garage models stand (they poke out past the wall; the outer city avoids them).</summary>
+    static List<Vector3> garageSpots;
 
     [MenuItem("Jackpot Derby/Build Arena")]
     public static void BuildArena()
@@ -42,7 +46,11 @@ public static class ArenaBuilder
         mats = new Dictionary<string, Material>();
         var grid = Object.FindAnyObjectByType<ArenaGrid>();
         if (grid == null) grid = new GameObject("Arena").AddComponent<ArenaGrid>();
+        grid.layout = ArenaGrid.DefaultLayout;
+        EditorUtility.SetDirty(grid);
         grid.Parse(true);
+        tunnels = new List<(Vector3 pos, Vector3 inward)>();
+        garageSpots = new List<Vector3>();
         Transform root = grid.transform;
         for (int i = root.childCount - 1; i >= 0; i--) Object.DestroyImmediate(root.GetChild(i).gameObject);
         ConfigureGroundTextures();
@@ -62,7 +70,8 @@ public static class ArenaBuilder
         Transform spawns = Group(root, "SpawnPoints");
 
         // Ground slab under everything (its collider is what cars drive on).
-        var g = Box(ground, "GroundSlab", new Vector3(0, -0.5f, 0), new Vector3(w * t + 120, 1, h * t + 120), TexMat("Ground", "tex_grass", new Color(0.55f, 0.62f, 0.50f), 40f));
+        // City paving, not grass: everything past the walls is pavement under the outer city and haze.
+        var g = Box(ground, "GroundSlab", new Vector3(0, -0.5f, 0), new Vector3(w * t + 120, 1, h * t + 120), TexMat("GroundPaving", "tex_sidewalk", new Color(0.74f, 0.73f, 0.70f), 27f));
         g.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
 
         var garageDefs = new[]
@@ -127,16 +136,16 @@ public static class ArenaBuilder
 
     // ---------- roads ----------
 
-    static bool Connects(char c) => c == 'R' || c == 'X' || c == 'G' || c == 'P' || c == 'K';
+    // Only real road continues a road's painted lanes. Plazas and parks sit beside the road (its edge
+    // line runs past them) instead of a lane running into their pavement and stopping dead.
+    static bool Connects(char c) => c == 'R' || c == 'X' || c == 'G';
 
-    static void BuildRoad(Transform parent, Transform props, ArenaGrid grid, int x, int y, Vector3 p, float t, string id)
+    /// <summary>Lay one road tile with the texture that matches its arms. Returns the texture used.</summary>
+    static string RoadSurface(Transform parent, string id, Vector3 p, float t, bool n, bool e, bool s, bool wv, out float yaw)
     {
-        bool n = Connects(grid.Get(x, y - 1)), s = Connects(grid.Get(x, y + 1));
-        bool e = Connects(grid.Get(x + 1, y)), wv = Connects(grid.Get(x - 1, y));
         int count = (n ? 1 : 0) + (s ? 1 : 0) + (e ? 1 : 0) + (wv ? 1 : 0);
-
         // Texture orientation (image top = north). Yaw turns N -> E -> S -> W.
-        string tex; float yaw;
+        string tex;
         if (count >= 4) { tex = "tex_road_intersection"; yaw = 0f; }
         else if (count == 3)
         {
@@ -149,11 +158,39 @@ public static class ArenaBuilder
             yaw = (s && e) ? 0f : (s && wv) ? 90f : (n && wv) ? 180f : 270f;
         }
         else { tex = "tex_road_straight"; yaw = (e || wv) && !(n || s) ? 90f : 0f; }
-
         Flat(parent, $"Road_{id}", p + Vector3.up * 0.02f, t, t, yaw, TexMat(tex, tex, Color.white, 1f));
+        return tex;
+    }
+
+    static void BuildRoad(Transform parent, Transform props, ArenaGrid grid, int x, int y, Vector3 p, float t, string id)
+    {
+        bool n = Connects(grid.Get(x, y - 1)), s = Connects(grid.Get(x, y + 1));
+        bool e = Connects(grid.Get(x + 1, y)), wv = Connects(grid.Get(x - 1, y));
+
+        // A road that dead-ends at the arena edge runs on into a tunnel built into the wall.
+        var outward = new List<(bool edge, Vector3 dir)>
+        {
+            (grid.Get(x, y - 1) == '#' && !e && !wv, Vector3.forward),
+            (grid.Get(x, y + 1) == '#' && !e && !wv, Vector3.back),
+            (grid.Get(x + 1, y) == '#' && !n && !s, Vector3.right),
+            (grid.Get(x - 1, y) == '#' && !n && !s, Vector3.left),
+        };
+        foreach (var o in outward)
+        {
+            if (!o.edge) continue;
+            if (o.dir == Vector3.forward) n = true; else if (o.dir == Vector3.back) s = true;
+            else if (o.dir == Vector3.right) e = true; else wv = true;
+            tunnels.Add((p + o.dir * (t * 0.5f), -o.dir));
+        }
+
+        string tex = RoadSurface(parent, id, p, t, n, e, s, wv, out float yaw);
+        int count = (n ? 1 : 0) + (s ? 1 : 0) + (e ? 1 : 0) + (wv ? 1 : 0);
 
         // Straight roads get parked cars and clutter on the wide shoulders (cover for dogfights).
-        if (tex != "tex_road_straight" || count < 2) return;
+        // Not on tunnel approaches: the road stays clear up to the tunnel mouth.
+        bool tunnelRoad = false;
+        foreach (var o in outward) tunnelRoad |= o.edge;
+        if (tex != "tex_road_straight" || count < 2 || tunnelRoad) return;
         bool alongZ = yaw == 0f;
         Vector3 along = alongZ ? Vector3.forward : Vector3.right;
         Vector3 across = alongZ ? Vector3.right : Vector3.forward;
@@ -180,6 +217,7 @@ public static class ArenaBuilder
         // Landmark: a giant slot machine (stand-in for lucky_tower).
         var slot = Place(parent, "slot_machine", p, 180f);
         if (slot != null) slot.transform.localScale = Vector3.one * 8f;
+        ScatterGrass(parent, p, islandR * 0.6f, 10);
         for (int i = 0; i < 6; i++)
         {
             float a = i * Mathf.PI / 3f + 0.4f;
@@ -206,7 +244,11 @@ public static class ArenaBuilder
 
     static void BuildPark(Transform parent, Vector3 p, float t, string id)
     {
-        Flat(parent, $"Park_{id}", p + Vector3.up * 0.02f, t, t, 0f, TexMat("Park", "tex_grass", Color.white, 2f));
+        // Soft sage-teal lawn that sits with the palette (the raw grass texture was too loud).
+        Flat(parent, $"Park_{id}", p + Vector3.up * 0.02f, t, t, 0f, TexMat("ParkLawn", "tex_grass", new Color(0.62f, 0.78f, 0.62f), 1.5f));
+        ScatterGrass(parent, p, t * 0.42f, 8);
+        Place(parent, "bush_large", p + new Vector3(-t * 0.36f, 0, (float)(rand.NextDouble() - 0.5) * t * 0.5f), (float)rand.NextDouble() * 360f);
+        Place(parent, "tree_planter", p + new Vector3((float)(rand.NextDouble() - 0.5) * t * 0.5f, 0, t * 0.36f), (float)rand.NextDouble() * 360f);
         int trees = 1 + rand.Next(0, 2);
         for (int i = 0; i < trees; i++)
         {
@@ -215,6 +257,23 @@ public static class ArenaBuilder
         }
         if (rand.NextDouble() < 0.6) Place(parent, "park_bench", p + new Vector3((float)(rand.NextDouble() - 0.5) * t * 0.5f, 0, -t * 0.35f), 180f);
         if (rand.NextDouble() < 0.6) Place(parent, "bush_large", p + new Vector3(t * 0.35f, 0, (float)(rand.NextDouble() - 0.5) * t * 0.5f), (float)rand.NextDouble() * 360f);
+    }
+
+    /// <summary>
+    /// Grass tufts (Lefika's grass_tuft model, if it has been added) scattered over a square patch.
+    /// Does nothing until Assets/Models/grass_tuft.glb exists and Build Scenery Prefabs has run.
+    /// </summary>
+    static void ScatterGrass(Transform parent, Vector3 centre, float halfSize, int count)
+    {
+        if (SceneryKit.Get("grass_tuft") == null) return;
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 pos = centre + new Vector3((float)(rand.NextDouble() * 2 - 1) * halfSize, 0.02f, (float)(rand.NextDouble() * 2 - 1) * halfSize);
+            var g = Place(parent, "grass_tuft", pos, (float)rand.NextDouble() * 360f, false);
+            if (g == null) continue;
+            g.transform.localScale = Vector3.one * (0.8f + (float)rand.NextDouble() * 0.4f);
+            g.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+        }
     }
 
     // ---------- city blocks ----------
@@ -291,8 +350,6 @@ public static class ArenaBuilder
         root.SetParent(parent, false);
         root.position = p;
 
-        Flat(root, "Apron", p + Vector3.up * 0.02f, t, t, 0f, TexMat("Plaza", "tex_sidewalk", new Color(0.85f, 0.85f, 0.82f), 3f));
-
         Vector3 openDir = Vector3.zero;
         var dirs = new[] { (dx: 0, dy: -1, v: Vector3.forward), (dx: 0, dy: 1, v: Vector3.back), (dx: 1, dy: 0, v: Vector3.right), (dx: -1, dy: 0, v: Vector3.left) };
         foreach (var d in dirs)
@@ -307,6 +364,16 @@ public static class ArenaBuilder
         Vector3 doorDir = gd.y == 0 ? Vector3.back : (gd.x == 0 ? Vector3.right : Vector3.left);
         Vector3 garagePos = p - doorDir * (t * 0.5f) - doorDir * (depth * 0.5f - 3f);
         Place(root, gd.model, garagePos, Quaternion.LookRotation(doorDir).eulerAngles.y);
+        garageSpots.Add(garagePos);
+
+        // The garage tile is a real road: its lanes join the neighbouring roads and run on into the
+        // garage door, so the corner reads as a driveway instead of a patch of pavement.
+        Vector3 back = -doorDir;
+        bool n = Connects(grid.Get(gd.x, gd.y - 1)) || back == Vector3.forward;
+        bool s = Connects(grid.Get(gd.x, gd.y + 1)) || back == Vector3.back;
+        bool e = Connects(grid.Get(gd.x + 1, gd.y)) || back == Vector3.right;
+        bool wv = Connects(grid.Get(gd.x - 1, gd.y)) || back == Vector3.left;
+        RoadSurface(root, "Garage", p, t, n, e, s, wv, out _);
 
         var sp = new GameObject("Spawn_" + gd.name.Replace(" ", "")).AddComponent<SpawnPoint>();
         sp.transform.SetParent(spawns, false);
@@ -346,26 +413,145 @@ public static class ArenaBuilder
             for (int i = 0; i < count; i++)
             {
                 Vector3 pos = sd.start + sd.dir * (step * (i + 0.5f));
+                if (NearTunnel(pos, TunnelHalfWidth + seg * 0.5f - 0.5f)) continue;
                 var wall = Place(parent, i % 5 == 2 ? "retaining_wall" : "arena_wall", pos, sd.yaw, false);
                 if (wall != null) wall.transform.localScale = new Vector3(step / seg * 1.02f, 1f, 1f);
             }
 
-            // A ring of city outside the walls so the edge doesn't look like the end of the world.
-            Vector3 outward = Quaternion.Euler(0, sd.yaw, 0) * Vector3.back;
-            // Corners stay clear: the garages poke out there.
-            for (float d = 17f; d < sd.len - 15f; d += 11f)
+        }
+
+        foreach (var tn in tunnels) BuildTunnel(parent, tn.pos, tn.inward);
+        BuildOuterCity(outside, sizeX, sizeZ);
+    }
+
+    // ---------- outer city ----------
+
+    const int OuterRows = 3;
+    const float OuterLot = 12f;      // lot width along the wall
+    const float OuterRowDepth = 13.5f; // lot depth: buildings ~10.8 deep leave ~2.7-unit footpaths between rows
+    static readonly string[] TallPool = { "apartment_brick", "apartment_cream", "apartment_cream_2", "apartment_teal", "house_tall", "store_grocer" };
+    static readonly string[] PathPool = { "metal_drums", "park_bench", "potted_plants", "trash_bags", "fire_hydrant", "mailbox", "tree_planter", "bush_large" };
+
+    /// <summary>
+    /// A wide band of dense city outside the walls so the edge blends into a skyline instead of
+    /// stopping: rows of buildings packed shoulder to shoulder (gaps too narrow for a car) along
+    /// narrow footpaths, getting taller further out, fading into the haze. No colliders; the far rows
+    /// cast no shadows.
+    /// </summary>
+    static void BuildOuterCity(Transform parent, float sizeX, float sizeZ)
+    {
+        float band = OuterRows * OuterRowDepth + 2f;
+
+        // Sides: 0 north, 1 south, 2 east, 3 west. North/south run the full width incl. corners.
+        var sides = new[]
+        {
+            (centre: new Vector3(0f, 0f, sizeZ / 2f),  inward: Vector3.back,    len: sizeX + band * 2f),
+            (centre: new Vector3(0f, 0f, -sizeZ / 2f), inward: Vector3.forward, len: sizeX + band * 2f),
+            (centre: new Vector3(sizeX / 2f, 0f, 0f),  inward: Vector3.left,    len: sizeZ),
+            (centre: new Vector3(-sizeX / 2f, 0f, 0f), inward: Vector3.right,   len: sizeZ),
+        };
+        foreach (var sd in sides)
+        {
+            Vector3 outward = -sd.inward;
+            Vector3 along = new Vector3(sd.inward.z, 0f, -sd.inward.x);
+            float yaw = Quaternion.LookRotation(sd.inward).eulerAngles.y;
+
+            // One raised pavement slab per side (tiled so each sidewalk tile is ~6 units).
+            var slab = Box(parent, "OuterPaving", sd.centre + outward * (band / 2f + 1f) + Vector3.up * 0.06f,
+                new Vector3(sd.len, 0.12f, band), OuterPavingMat(sd.len, band), false);
+            slab.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            slab.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            slab.isStatic = true;
+
+            int lots = Mathf.FloorToInt(sd.len / OuterLot);
+            float first = -(lots - 1) * OuterLot / 2f;
+            for (int row = 0; row < OuterRows; row++)
             {
-                Vector3 pos = sd.start + sd.dir * d + outward * 7.5f;
-                if (d > sd.len * 0.45f && d < sd.len * 0.55f) { Place(outside, "tunnel_entrance", pos, sd.yaw, false); d += 4f; continue; }
-                var b = Place(outside, Pick(BuildingPool), pos, sd.yaw, false);
-                if (b != null)
+                float depth = 2.5f + OuterRowDepth * (row + 0.5f);
+                for (int i = 0; i < lots; i++)
                 {
-                    float s = 1.2f + (float)rand.NextDouble() * 0.25f;
-                    // South of the arena sits between the camera and the play area: keep it low.
-                    b.transform.localScale = new Vector3(s, sd.yaw == 0f ? s * 0.45f : s, s);
+                    Vector3 pos = sd.centre + along * (first + i * OuterLot) + outward * depth;
+                    if (InsideArena(pos, sizeX, sizeZ, 1f)) continue;
+                    if (NearGarage(pos, 13f)) continue;
+                    if (row == 0 && NearTunnel(pos, TunnelHalfWidth + 5f)) continue;
+
+                    string model = row == 0 ? Pick(BuildingPool) : Pick(TallPool);
+                    var b = Place(parent, model, pos, yaw, false);
+                    if (b == null) continue;
+                    // Fill the lot: footprint ~10.6-11 along the wall, so alleys are only ~1-1.4 wide.
+                    Vector3 ms = b.GetComponent<MeshFilter>().sharedMesh.bounds.size;
+                    float s = (10.6f + (float)rand.NextDouble() * 0.4f) / Mathf.Max(ms.x, ms.z);
+                    float tall = row == 0 ? 1.0f + (float)rand.NextDouble() * 0.25f
+                                          : 1.25f + row * 0.25f + (float)rand.NextDouble() * 0.35f;
+                    b.transform.localScale = new Vector3(s, s * tall, s);
+                    if (row > 0) b.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+                    if (row == 0 && rand.NextDouble() < 0.35) DressRoof(parent, b, yaw);
+
+                    // Footpath furniture in the alley in front of the first two rows.
+                    if (row < 2 && i % 2 == 0)
+                    {
+                        Vector3 path = pos + sd.inward * (OuterRowDepth * 0.5f - 0.4f);
+                        if (rand.NextDouble() < 0.7) Place(parent, "street_lamp", path + along * 4.5f, yaw, false);
+                        if (rand.NextDouble() < 0.6) Place(parent, Pick(PathPool), path - along * 3f, yaw, false);
+                    }
                 }
             }
         }
+    }
+
+    static Material OuterPavingMat(float len, float depth)
+    {
+        string name = $"OuterPaving_{Mathf.RoundToInt(len)}";
+        var m = TexMat(name, "tex_sidewalk", new Color(0.86f, 0.85f, 0.82f), 1f);
+        m.SetTextureScale("_BaseMap", new Vector2(len / 6f, depth / 6f));
+        return m;
+    }
+
+    static bool InsideArena(Vector3 p, float sizeX, float sizeZ, float margin) =>
+        Mathf.Abs(p.x) < sizeX / 2f + margin && Mathf.Abs(p.z) < sizeZ / 2f + margin;
+
+    static bool NearGarage(Vector3 p, float range)
+    {
+        foreach (var g in garageSpots)
+        {
+            Vector3 d = p - g; d.y = 0f;
+            if (d.magnitude < range) return true;
+        }
+        return false;
+    }
+
+    const float TunnelHalfWidth = 6f;
+
+    /// <summary>True if a point on the edge band is within `range` (along the wall) of a tunnel mouth.</summary>
+    static bool NearTunnel(Vector3 pos, float range)
+    {
+        foreach (var tn in tunnels)
+        {
+            Vector3 d = pos - tn.pos; d.y = 0f;
+            Vector3 along = new Vector3(tn.inward.z, 0f, -tn.inward.x);
+            if (Mathf.Abs(Vector3.Dot(d, along)) < range && Mathf.Abs(Vector3.Dot(d, tn.inward)) < 30f) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// A tunnel built into the wall line, its mouth facing into the arena so the player sees it.
+    /// The invisible edge collider still closes it; a barrier and cones sit across the mouth.
+    /// </summary>
+    static void BuildTunnel(Transform parent, Vector3 mouth, Vector3 inward)
+    {
+        var root = Group(parent, "Tunnel");
+        root.position = mouth;
+        var prefab = SceneryKit.Get("tunnel_entrance");
+        float depth = prefab != null ? prefab.GetComponent<MeshFilter>().sharedMesh.bounds.size.z : 6f;
+        float yaw = Quaternion.LookRotation(inward).eulerAngles.y;
+        Place(root, "tunnel_entrance", mouth - inward * (depth * 0.5f), yaw, false);
+        Vector3 side = new Vector3(inward.z, 0f, -inward.x);
+        // The barrier model's long side is its Z axis: turn it 90° so it spans the mouth.
+        Place(root, "barrier", mouth - inward * 1.5f + side * 1.4f, yaw + 90f, false);
+        Place(root, "barrier", mouth - inward * 1.5f - side * 1.4f, yaw + 90f, false);
+        Place(root, "cone", mouth + inward * 0.8f + side * 2.2f, yaw, false);
+        Place(root, "cone", mouth + inward * 0.8f - side * 2.2f, yaw + 30f, false);
     }
 
     // ---------- helpers ----------
@@ -450,7 +636,7 @@ public static class ArenaBuilder
         return m;
     }
 
-    /// <summary>Ground textures: full 2K, crunch-compressed; clamp the road tiles so seams line up.</summary>
+    /// <summary>Ground textures: full 2K, high-quality compression (no crunch); clamp the road tiles so seams line up.</summary>
     static void ConfigureGroundTextures()
     {
         foreach (var n in new[] { "tex_road_straight", "tex_road_intersection", "tex_road_tjunction", "tex_road_curve", "tex_roundabout", "tex_sidewalk", "tex_grass" })
@@ -458,13 +644,14 @@ public static class ArenaBuilder
             var imp = AssetImporter.GetAtPath($"Assets/Textures/{n}.jpg") as TextureImporter;
             if (imp == null) continue;
             var wrap = n.StartsWith("tex_road") || n == "tex_roundabout" ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
-            if (imp.maxTextureSize == 2048 && imp.wrapMode == wrap && imp.crunchedCompression) continue;
+            if (imp.maxTextureSize == 2048 && imp.wrapMode == wrap && !imp.crunchedCompression
+                && imp.textureCompression == TextureImporterCompression.CompressedHQ) continue;
             imp.maxTextureSize = 2048;
             imp.wrapMode = wrap;
-            imp.anisoLevel = 4;
-            imp.textureCompression = TextureImporterCompression.Compressed;
-            imp.crunchedCompression = true;
-            imp.compressionQuality = 90;
+            imp.anisoLevel = 8;
+            imp.textureCompression = TextureImporterCompression.CompressedHQ;
+            imp.crunchedCompression = false;
+            imp.compressionQuality = 100;
             imp.SaveAndReimport();
         }
     }

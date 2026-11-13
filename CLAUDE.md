@@ -97,7 +97,11 @@ Use NavMesh (AI Navigation package) with a simple state machine: Wander, SeekChe
 **Follow `Docs/map_reference.png`** (Lefika's overview image): a big, dense, isometric-looking cartoon city
 grid with a garage in each corner and the Bad Luck Storm clouds around the edge.
 - Rectangle about 200 × 140 units, one ground level (no drivable overpasses or tunnels for the jam),
-  walled with arena_wall / retaining_wall segments; tunnel_entrance and overpass_pillar as edge scenery.
+  walled with arena_wall / retaining_wall segments. Roads dead-ending at the middle of each side end in
+  a tunnel_entrance built into the wall (facing in, blocked). Outside the walls: a ~40-unit band of
+  densely packed buildings on narrow footpaths, fading into fog, so the edge never looks cut off.
+  No grass outside the walls; parks use a soft sage lawn (grass_tuft model gets scattered when added).
+- Road lanes only connect to road/roundabout/garage tiles; plazas and parks sit beside roads.
 - Streets: a grid of 2-lane roads with intersections, T-junctions and a few curves, plus a central
   roundabout. Build road surfaces, sidewalks and curbs in Unity (planes/ProBuilder) using the textures in
   Assets/Textures: tex_road_straight, tex_road_intersection, tex_road_tjunction, tex_road_curve,
@@ -138,8 +142,10 @@ Old road game pieces (road_slab and variants) are optional decoration only.
 - Art style: chunky hand-painted cartoon, slightly worn; teal / yellow / cream / red palette.
 
 ## Presentation
-- High three-quarter top-down camera, Squad Busters style (matching Docs/map_reference.png): follows
-  the player smoothly, high enough to see attack ranges and nearby enemies around buildings.
+- Low chase camera just above and behind the car (Lefika's choice, replacing the original high top-down
+  view): it swings round behind the car's heading, widens a little with speed/Turbo, and slides in
+  front of (or lifts over) buildings so they never hide the car. HUD world markers must handle points
+  behind the camera.
 - HUD: car health + current blaster, odometer reels with padlock, hint popups, chest arrows, enemy health bars
   over cars, kill feed, storm timer, match timer.
 - Juice: hit flashes, screen shake, coin bursts, chest light beams, TAKEDOWN / WRECKED popups, LUCKY! popup.

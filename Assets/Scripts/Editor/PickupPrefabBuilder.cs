@@ -157,6 +157,29 @@ public static class PickupPrefabBuilder
         return m;
     }
 
+    /// <summary>Material on the storm mist shader (wall curtain or ground darkening).</summary>
+    static Material MistMaterial(string name, bool ground, Color light, Color deep, float maxAlpha)
+    {
+        ModelPrefabUtil.EnsureFolder("Assets/Materials/FX");
+        string path = $"Assets/Materials/FX/{name}.mat";
+        var shader = Shader.Find("JackpotDerby/StormMist");
+        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null) { m = new Material(shader); AssetDatabase.CreateAsset(m, path); }
+        m.shader = shader;
+        m.SetColor("_Color", light);
+        m.SetColor("_DeepColor", deep);
+        m.SetFloat("_MaxAlpha", maxAlpha);
+        m.SetFloat("_GroundMode", ground ? 1f : 0f);
+        m.SetFloat("_NoiseScale", ground ? 0.05f : 0.07f);
+        m.SetFloat("_ScrollSpeed", ground ? 0.4f : 0.6f);
+        m.SetFloat("_Height", 14f);
+        m.SetFloat("_EdgeSoftness", 10f);
+        m.SetFloat("_SoftDepth", 2f);
+        m.renderQueue = ground ? 2990 : 3000;
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
     static void SetupScene(Pickup dice, Pickup clover, BlackCat cat)
     {
         var sys = GameObject.Find("GameSystems");
@@ -173,8 +196,12 @@ public static class PickupPrefabBuilder
         var storm = stormGo.GetComponent<StormController>();
         if (storm == null) storm = stormGo.AddComponent<StormController>();
         ModelPrefabUtil.SetField(storm, "grid", Object.FindAnyObjectByType<ArenaGrid>());
-        ModelPrefabUtil.SetField(storm, "wallMaterial", AlphaMaterial("StormWall", new Color(0.45f, 0.18f, 0.7f, 0.32f)));
-        ModelPrefabUtil.SetField(storm, "groundMaterial", AlphaMaterial("StormGround", new Color(0.12f, 0.04f, 0.2f, 0.5f)));
+        ModelPrefabUtil.SetField(storm, "wallMaterial", MistMaterial("StormMistWall", false,
+            new Color(0.40f, 0.36f, 0.52f), new Color(0.17f, 0.15f, 0.25f), 0.8f));
+        ModelPrefabUtil.SetField(storm, "groundMaterial", MistMaterial("StormMistGround", true,
+            new Color(0.16f, 0.15f, 0.23f), new Color(0.08f, 0.08f, 0.13f), 0.55f));
+        var vg = GameObject.Find("StormVolume");
+        if (vg != null) ModelPrefabUtil.SetField(storm, "stormVolume", vg.GetComponent<UnityEngine.Rendering.Volume>());
         ModelPrefabUtil.SetField(storm, "cloudMaterial", CombatAssetBuilder.ParticleMaterial("FxPuff", false));
 
         EditorSceneManager.MarkSceneDirty(sys.scene);

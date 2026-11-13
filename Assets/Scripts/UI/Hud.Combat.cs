@@ -139,7 +139,7 @@ public partial class Hud
         stormText.fontStyle = FontStyles.Bold;
         Anchor(stormText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(320f, 22f));
         Outline(stormText);
-        stormOverlay = NewImage("StormOverlay", canvasRect, UISprites.Vignette, new Color(0.45f, 0.15f, 0.7f, 0f));
+        stormOverlay = NewImage("StormOverlay", canvasRect, UISprites.Vignette, new Color(0.12f, 0.10f, 0.20f, 0f));
         Stretch(stormOverlay.rectTransform);
         stormOverlay.rectTransform.SetSiblingIndex(0);
         stormWarning = NewText("StormWarning", canvasRect, "GET OUT OF THE STORM!", 34, new Color(0.9f, 0.6f, 1f));
@@ -396,8 +396,9 @@ public partial class Hud
         stormText.alpha = storm.IsShrinking ? 0.7f + 0.3f * Mathf.Sin(Time.time * 8f) : 1f;
 
         bool outside = pHealth != null && pHealth.IsAlive && !storm.IsInside(player.transform.position, 0f);
-        stormOverlayAlpha = Mathf.MoveTowards(stormOverlayAlpha, outside ? 0.75f : 0f, dt * 2f);
-        stormOverlay.color = new Color(0.45f, 0.15f, 0.7f, stormOverlayAlpha);
+        // A soft dark vignette; the StormVolume (faded by StormController) does the desaturation.
+        stormOverlayAlpha = Mathf.MoveTowards(stormOverlayAlpha, outside ? 0.45f : 0f, dt * 1.2f);
+        stormOverlay.color = new Color(0.12f, 0.10f, 0.20f, stormOverlayAlpha);
         stormWarning.gameObject.SetActive(outside);
         if (outside) stormWarning.alpha = 0.6f + 0.4f * Mathf.Sin(Time.time * 7f);
     }
@@ -556,6 +557,8 @@ public partial class Hud
                 continue;
             }
             Vector3 vp = cam.WorldToViewportPoint(d.world);
+            // The chase camera turns: a hit behind it would project mirrored onto the screen.
+            d.text.enabled = vp.z > 0f;
             float rise = 40f * d.age + 30f * (1f - Mathf.Exp(-d.age * 10f));
             d.text.rectTransform.anchoredPosition = new Vector2(vp.x * size.x + d.xDrift * d.age, vp.y * size.y + rise);
             float pop = d.age < 0.1f ? Mathf.Lerp(0.4f, 1.4f, d.age / 0.1f) : Mathf.Lerp(1.4f, 1f, (d.age - 0.1f) * 6f);

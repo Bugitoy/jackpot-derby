@@ -2,26 +2,27 @@ using UnityEngine;
 
 /// <summary>
 /// The arena as a grid of square tiles, written as text (one line per row, top row = north).
-/// The editor menu "Jackpot Derby > Build Graybox Arena" turns this into geometry, and gameplay
+/// The editor menu "Jackpot Derby > Build Arena" turns this into geometry, and gameplay
 /// scripts use it to find open ground (chest spawns) and roads.
 ///
 /// Legend:  R road   P plaza/parking (open, drivable)   K park (grass + trees)
 ///          . city block (sidewalk + buildings)   X roundabout island   G garage
+/// A road that dead-ends at the edge (middle of each side) ends in a tunnel built into the wall.
 /// </summary>
 public class ArenaGrid : MonoBehaviour
 {
     public const string DefaultLayout =
-        "GR.............RG\n" +
+        "GR......R......RG\n" +
         "RRRRRRRRRRRRRRRRR\n" +
         ".R...R..R..R...R.\n" +
         ".RPPPR.KRK.RPPPR.\n" +
         ".R...R.RRR.R...R.\n" +
-        ".RRRRRRRXRRRRRRR.\n" +
+        "RRRRRRRRXRRRRRRRR\n" +
         ".R..R..RRR..R..R.\n" +
         ".RPPR..KRK..RPPR.\n" +
         ".R..R...R...R..R.\n" +
         "RRRRRRRRRRRRRRRRR\n" +
-        "GR.............RG";
+        "GR......R......RG";
 
     public float tileSize = 12f;
     [Tooltip("Random seed for building heights/colours, so rebuilding gives the same city.")]
