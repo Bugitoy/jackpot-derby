@@ -36,15 +36,6 @@ public static class PickupPrefabBuilder
         }
         ModelPrefabUtil.NoShadows(root);
 
-        var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        disc.name = "GroundGlow";
-        Object.DestroyImmediate(disc.GetComponent<Collider>());
-        disc.transform.SetParent(root.transform, false);
-        disc.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-        disc.transform.localScale = new Vector3(size * 1.6f, 0.01f, size * 1.6f);
-        disc.GetComponent<Renderer>().sharedMaterial = ModelPrefabUtil.GlowMaterial(name + "Glow", glow);
-        ModelPrefabUtil.NoShadows(disc);
-
         var col = root.AddComponent<SphereCollider>();
         col.isTrigger = true;
         col.radius = 1.7f;
@@ -96,7 +87,26 @@ public static class PickupPrefabBuilder
         var root = new GameObject("BlackCat");
         var visual = new GameObject("Visual").transform;
         visual.SetParent(root.transform, false);
-        ModelPrefabUtil.PlaceModel("Assets/Models/black_cat.glb", visual, 1.4f);
+        // The cat model faces -X; turn it 90° so it faces +Z (the way it walks).
+        var model = ModelPrefabUtil.PlaceModel("Assets/Models/black_cat.glb", visual, 1.6f, 90f);
+
+        // Unpack so we can add hinges, then hang each leg/tail/head under a pivot at its joint.
+        PrefabUtility.UnpackPrefabInstance(model, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        Transform Part(string n)
+        {
+            foreach (var t in model.GetComponentsInChildren<Transform>(true)) if (t.name == n) return t;
+            return null;
+        }
+        // Tripo part numbers for this model: 0 head, 7-9 ears, 1 body, 2 tail, 3-4 hind legs, 5-6 front legs.
+        var head = Hinge(visual, Part("tripo_part_0"), HingeAt.Bottom);
+        foreach (var ear in new[] { "tripo_part_7", "tripo_part_8", "tripo_part_9" })
+        {
+            var e = Part(ear);
+            if (e != null && head != null) e.SetParent(head, true);
+        }
+        var tail = Hinge(visual, Part("tripo_part_2"), HingeAt.BottomBack);
+        var front = new[] { Hinge(visual, Part("tripo_part_5"), HingeAt.Top), Hinge(visual, Part("tripo_part_6"), HingeAt.Top) };
+        var back = new[] { Hinge(visual, Part("tripo_part_3"), HingeAt.Top), Hinge(visual, Part("tripo_part_4"), HingeAt.Top) };
 
         var col = root.AddComponent<SphereCollider>();
         col.isTrigger = true;
@@ -105,10 +115,37 @@ public static class PickupPrefabBuilder
         root.AddComponent<NavMeshAgent>();
         var cat = root.AddComponent<BlackCat>();
         ModelPrefabUtil.SetField(cat, "visual", visual);
+        ModelPrefabUtil.SetField(cat, "head", head);
+        ModelPrefabUtil.SetField(cat, "tail", tail);
+        ModelPrefabUtil.SetArray(cat, "frontLegs", front);
+        ModelPrefabUtil.SetArray(cat, "backLegs", back);
 
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{Folder}/BlackCat.prefab");
         Object.DestroyImmediate(root);
         return prefab.GetComponent<BlackCat>();
+    }
+
+    enum HingeAt { Top, Bottom, BottomBack }
+
+    /// <summary>Put `part` under a new pivot at its joint, aligned with the cat (local X = cat's right).</summary>
+    static Transform Hinge(Transform visual, Transform part, HingeAt where)
+    {
+        if (part == null) return null;
+        var r = part.GetComponent<Renderer>();
+        Bounds b = r != null ? r.bounds : new Bounds(part.position, Vector3.zero);
+        Vector3 joint;
+        switch (where)
+        {
+            case HingeAt.Top: joint = new Vector3(b.center.x, b.max.y, b.center.z); break;
+            case HingeAt.Bottom: joint = new Vector3(b.center.x, b.min.y, b.center.z); break;
+            default: joint = new Vector3(b.center.x, b.min.y + b.size.y * 0.15f, b.max.z); break; // tail root, toward the body
+        }
+        var pivot = new GameObject(part.name + "_Hinge").transform;
+        pivot.SetParent(part.parent, false);
+        pivot.position = joint;
+        pivot.rotation = visual.rotation;
+        part.SetParent(pivot, true);
+        return pivot;
     }
 
     static Material AlphaMaterial(string name, Color c)
