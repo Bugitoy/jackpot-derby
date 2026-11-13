@@ -14,18 +14,19 @@ public static class PickupPrefabBuilder
     {
         ModelPrefabUtil.EnsureFolder(Folder);
         var dice = BuildPickup("Dice", "Assets/Models/die.glb", PickupKind.Dice, 1.5f, new Color(1f, 1f, 1f, 0.45f));
-        var clover = BuildPickup("Clover", "Assets/Models/clover_pickup.glb", PickupKind.Clover, 1.8f, new Color(0.35f, 1f, 0.4f, 0.5f));
+        var clover = BuildPickup("Clover", "Assets/Models/clover_pickup.glb", PickupKind.Clover, 1.8f, new Color(0.35f, 1f, 0.4f, 0.5f), hideBase: true);
         var cat = BuildCat();
         AssetDatabase.SaveAssets();
         SetupScene(dice, clover, cat);
     }
 
-    static Pickup BuildPickup(string name, string modelPath, PickupKind kind, float size, Color glow)
+    static Pickup BuildPickup(string name, string modelPath, PickupKind kind, float size, Color glow, bool hideBase = false)
     {
         var root = new GameObject(name);
         var visual = new GameObject("Visual").transform;
         visual.SetParent(root.transform, false);
         var model = ModelPrefabUtil.PlaceModel(modelPath, visual, size);
+        if (model != null && hideBase) HideBaseAndRefit(model, visual, size);
         if (model != null)
         {
             // Spin around the middle of the model, not its base.
@@ -58,6 +59,36 @@ public static class PickupPrefabBuilder
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{Folder}/{name}.prefab");
         Object.DestroyImmediate(root);
         return prefab.GetComponent<Pickup>();
+    }
+
+    /// <summary>
+    /// Hide the flat base the model stands on (e.g. the clover's coin: parts that sit entirely in the
+    /// bottom 20% of the model), then rescale so what's left is `size` across and sits on the ground.
+    /// </summary>
+    static void HideBaseAndRefit(GameObject model, Transform parent, float size)
+    {
+        Bounds total = ModelPrefabUtil.LocalBounds(model, parent);
+        float cut = total.min.y + total.size.y * 0.2f;
+        foreach (var r in model.GetComponentsInChildren<Renderer>())
+            if (r.bounds.max.y < cut) r.gameObject.SetActive(false);
+
+        Bounds rest = ActiveBounds(model, parent);
+        float scale = size / Mathf.Max(rest.size.x, rest.size.z, rest.size.y * 0.8f);
+        model.transform.localScale *= scale;
+        rest = ActiveBounds(model, parent);
+        model.transform.localPosition += new Vector3(-rest.center.x, -rest.min.y, -rest.center.z);
+    }
+
+    static Bounds ActiveBounds(GameObject model, Transform parent)
+    {
+        Bounds b = default;
+        bool any = false;
+        foreach (var r in model.GetComponentsInChildren<Renderer>(false))
+        {
+            if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+        }
+        b.center -= parent.position;
+        return b;
     }
 
     static BlackCat BuildCat()

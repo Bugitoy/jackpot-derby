@@ -408,7 +408,8 @@ public partial class Hud
         float hp = pHealth.Health / pHealth.MaxHealth;
         SetFill(hpFill, hp);
         hpFillImg.color = HpColor(hp);
-        hpText.text = Mathf.CeilToInt(pHealth.Health).ToString();
+        if (pHealth.IsRegenerating) hpFillImg.color = Color.Lerp(hpFillImg.color, Color.white, 0.25f + 0.2f * Mathf.Sin(Time.time * 6f));
+        hpText.text = (pHealth.IsRegenerating ? "<color=#7CFF8A>+</color>" : "") + Mathf.FloorToInt(pHealth.Health);
 
         // Which blaster you carry (no separate bar: it's yours until the car is destroyed).
         bool armed = loadout != null && loadout.IsArmed;

@@ -52,6 +52,7 @@ and stay on your car until it's destroyed. A Bad Luck Storm shrinks the arena. *
 ## Health and blasters
 - Car health: 100, one bar. All damage comes off it. Health 0 → the car is destroyed, whatever blaster it
   carries. There is no separate blaster bar and no demotion: a blaster stays until the car is destroyed.
+- Health slowly regenerates (3 per second) once a car has gone 4 seconds without taking damage.
 ### Combat feel: like Supercell's Squad Busters
 The player only steers; positioning is the skill. Combat is automatic, chunky, readable and juicy.
 - **Auto-targeting:** an armed car automatically turns its blaster toward and fires at the nearest enemy
@@ -74,7 +75,7 @@ The player only steers; positioning is the skill. Combat is automatic, chunky, r
 ## Superstitions and pickups
 - **Black cats** (2–3) wander the streets. Touching one scrambles your number (random ±20) and unlocks it.
 - **Dice pickup** (die model): re-rolls your number to a random 1–99 and unlocks it. A gamble.
-- **Clover pickup**: +30 car health. One every 40 s, max 2 on the map.
+- **Clover pickup** (the clover alone, without the coin base of the model): +30 car health. One every 40 s, max 2 on the map.
 
 ## Bad Luck Storm
 - Starts shrinking at 60 s, every 30 s, toward a point near the centre, down to about 30×20 units by 4 min.

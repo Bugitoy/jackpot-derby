@@ -4,10 +4,19 @@ using UnityEngine;
 
 /// <summary>
 /// Car health (100). All damage comes straight off health; health 0 = destroyed (whatever blaster it had).
+/// After a few seconds without taking damage, health slowly comes back.
 /// </summary>
 public class CarHealth : MonoBehaviour
 {
     [SerializeField] float maxHealth = 100f;
+    [Tooltip("Seconds without taking damage before health starts coming back.")]
+    [SerializeField] float regenDelay = 4f;
+    [Tooltip("Health regained per second once regenerating.")]
+    [SerializeField] float regenPerSecond = 3f;
+
+    /// <summary>True while health is slowly coming back.</summary>
+    public bool IsRegenerating => IsAlive && Health < maxHealth && sinceDamage >= regenDelay;
+    float sinceDamage;
 
     public float Health { get; private set; }
     public float MaxHealth => maxHealth;
@@ -36,6 +45,14 @@ public class CarHealth : MonoBehaviour
     void OnEnable() { if (IsAlive && !Alive.Contains(this)) Alive.Add(this); }
     void OnDisable() => Alive.Remove(this);
 
+    void Update()
+    {
+        if (!IsAlive) return;
+        sinceDamage += Time.deltaTime;
+        if (sinceDamage >= regenDelay && Health < maxHealth)
+            Health = Mathf.Min(maxHealth, Health + regenPerSecond * Time.deltaTime);
+    }
+
     public void TakeDamage(float amount, CarIdentity attacker, DamageKind kind, Vector3 point)
     {
         if (!IsAlive || amount <= 0f) return;
@@ -44,6 +61,7 @@ public class CarHealth : MonoBehaviour
         float toBlaster = 0f;
         float toHealth = Mathf.Min(Health, amount);
         Health -= toHealth;
+        sinceDamage = 0f;
         if (attacker != null) LastAttacker = attacker;
 
         var info = new DamageInfo
