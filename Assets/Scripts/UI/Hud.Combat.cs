@@ -61,6 +61,11 @@ public partial class Hud
     readonly List<DamageNumber> damageNumbers = new List<DamageNumber>();
     readonly Stack<DamageNumber> damagePool = new Stack<DamageNumber>();
 
+    // Storm
+    TextMeshProUGUI stormText, stormWarning;
+    Image stormOverlay;
+    float stormOverlayAlpha;
+
     // Top bar, feed, overlays, results
     TextMeshProUGUI timerText, carsLeftText;
     RectTransform feedLayer;
@@ -129,6 +134,19 @@ public partial class Hud
         carsLeftText = NewText("CarsLeft", canvasRect, "", 16, new Color(1f, 1f, 1f, 0.85f));
         Anchor(carsLeftText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -56f), new Vector2(240f, 22f));
         Outline(carsLeftText);
+
+        stormText = NewText("StormTimer", canvasRect, "", 17, new Color(0.85f, 0.65f, 1f));
+        stormText.fontStyle = FontStyles.Bold;
+        Anchor(stormText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(320f, 22f));
+        Outline(stormText);
+        stormOverlay = NewImage("StormOverlay", canvasRect, UISprites.Vignette, new Color(0.45f, 0.15f, 0.7f, 0f));
+        Stretch(stormOverlay.rectTransform);
+        stormOverlay.rectTransform.SetSiblingIndex(0);
+        stormWarning = NewText("StormWarning", canvasRect, "GET OUT OF THE STORM!", 34, new Color(0.9f, 0.6f, 1f));
+        stormWarning.fontStyle = FontStyles.Bold;
+        Anchor(stormWarning.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 90f), new Vector2(800f, 44f));
+        Outline(stormWarning);
+        stormWarning.gameObject.SetActive(false);
 
         feedLayer = NewRect("KillFeed", canvasRect, Vector2.zero, new Vector2(420f, 200f));
         feedLayer.anchorMin = feedLayer.anchorMax = new Vector2(1f, 1f);
@@ -226,12 +244,30 @@ public partial class Hud
     void OnEnable()
     {
         CarHealth.AnyDamaged += OnAnyDamaged;
+        Pickup.AnyCollected += OnPickup;
+        BlackCat.AnyScrambled += OnCat;
     }
 
     void OnDisable()
     {
         CarHealth.AnyDamaged -= OnAnyDamaged;
+        Pickup.AnyCollected -= OnPickup;
+        BlackCat.AnyScrambled -= OnCat;
         if (Instance == this) Instance = null;
+    }
+
+    void OnPickup(Pickup p, GameObject car, string message)
+    {
+        if (player == null || car != player.gameObject) return;
+        bool clover = p.Kind == PickupKind.Clover;
+        ShowPopup(clover ? "LUCKY CLOVER!" : "DICE ROLL!", clover ? HpGreen : Color.white, message.Substring(message.IndexOf('!') + 1).Trim());
+    }
+
+    void OnCat(GameObject car, int newNumber)
+    {
+        if (player == null || car != player.gameObject) return;
+        ShowPopup("BLACK CAT!", new Color(0.75f, 0.5f, 1f), "bad luck - number scrambled to " + newNumber);
+        CameraShake.Add(0.2f);
     }
 
     void BindPlayerCombat()
@@ -267,7 +303,8 @@ public partial class Hud
         if (d.kind == DamageKind.Ram || d.kind == DamageKind.Blast) c = victimIsPlayer ? HpRed : GoldBar;
         float size = d.kind == DamageKind.Ram || d.kind == DamageKind.Blast ? 40f : 30f;
         SpawnDamageNumber(d.point + Vector3.up * 1.5f, Mathf.CeilToInt(d.amount).ToString(), c, size);
-        if (victimIsPlayer) CameraShake.Add(Mathf.Clamp(0.18f + d.amount / 50f, 0f, 0.6f));
+        if (d.kind == DamageKind.Storm) c = new Color(0.8f, 0.5f, 1f);
+        if (victimIsPlayer && d.kind != DamageKind.Storm) CameraShake.Add(Mathf.Clamp(0.18f + d.amount / 50f, 0f, 0.6f));
         else if (attackerIsPlayer) CameraShake.Add(d.kind == DamageKind.Blaster ? 0.05f : 0.25f);
     }
 
@@ -338,10 +375,31 @@ public partial class Hud
             if (age > 5f) { Destroy(text.gameObject); feed.RemoveAt(i); }
         }
 
+        UpdateStormUI(dt);
         vignette = Mathf.Max(0f, vignette - dt * 1.6f);
         vignetteImg.color = new Color(1f, 0.1f, 0.1f, vignette);
         flashAlpha = Mathf.Max(0f, flashAlpha - dt * 1.8f);
         flashImg.color = new Color(1f, 0.9f, 0.5f, flashAlpha);
+    }
+
+    void UpdateStormUI(float dt)
+    {
+        var storm = StormController.Instance;
+        if (storm == null) { stormText.text = ""; return; }
+        if (storm.IsShrinking) stormText.text = "BAD LUCK STORM CLOSING IN!";
+        else if (storm.TimeToNextShrink > 0f)
+        {
+            int s = Mathf.CeilToInt(storm.TimeToNextShrink);
+            stormText.text = $"STORM SHRINKS IN {s / 60}:{s % 60:00}";
+        }
+        else stormText.text = "FINAL STORM ZONE";
+        stormText.alpha = storm.IsShrinking ? 0.7f + 0.3f * Mathf.Sin(Time.time * 8f) : 1f;
+
+        bool outside = pHealth != null && pHealth.IsAlive && !storm.IsInside(player.transform.position, 0f);
+        stormOverlayAlpha = Mathf.MoveTowards(stormOverlayAlpha, outside ? 0.75f : 0f, dt * 2f);
+        stormOverlay.color = new Color(0.45f, 0.15f, 0.7f, stormOverlayAlpha);
+        stormWarning.gameObject.SetActive(outside);
+        if (outside) stormWarning.alpha = 0.6f + 0.4f * Mathf.Sin(Time.time * 7f);
     }
 
     void UpdatePlayerPanel()

@@ -38,6 +38,8 @@ public class AIBrain : MonoBehaviour
     Vector3 roamPoint, fleePoint;
     CarHealth huntingTarget, givenUpOn;
     float huntTime, givenUpUntil;
+    bool stormEscape;
+    Pickup pickupGoal;
 
     // Number game for the current chest.
     Chest chest, searchChest;
@@ -121,6 +123,12 @@ public class AIBrain : MonoBehaviour
         target = FindHuntTarget();
         chest = PickChest();
 
+        // The storm beats everything: get inside before it closes in.
+        var storm = StormController.Instance;
+        stormEscape = storm != null && !storm.IsInsideTarget(transform.position, 4f)
+                      && (!storm.IsInside(transform.position, 2f) || storm.IsShrinking || storm.TimeToNextShrink < 10f);
+        pickupGoal = PickPickup(hp);
+
         State next;
         if (Current == State.Ram && ramTimer > 0f && target != null) next = State.Ram;
         else if (threat != null && (!armed || hp < p.fleeHealth) && !brave && !CommittedToChest()) next = State.Flee;
@@ -165,12 +173,32 @@ public class AIBrain : MonoBehaviour
         return wants;
     }
 
+    /// <summary>Clovers when hurt (everyone); dice for gamblers (Double Dice).</summary>
+    Pickup PickPickup(float hp)
+    {
+        Pickup best = null;
+        float bestD = float.MaxValue;
+        var storm = StormController.Instance;
+        foreach (var pk in Pickup.Active)
+        {
+            if (pk == null) continue;
+            bool wants = pk.Kind == PickupKind.Clover ? hp < 0.7f : personality.chaos > 0.3f;
+            if (!wants) continue;
+            float d = Dist(pk.transform.position);
+            if (d > 50f || (storm != null && !storm.IsInside(pk.transform.position, 2f))) continue;
+            if (d < bestD) { bestD = d; best = pk; }
+        }
+        return best;
+    }
+
     Chest PickChest()
     {
         Chest best = null;
         float bestD = float.MaxValue;
+        var storm = StormController.Instance;
         foreach (var c in Chest.Active)
         {
+            if (storm != null && !storm.IsInside(c.transform.position, 2f)) continue;
             float d = Dist(c.transform.position);
             if (c == chest) d *= 0.6f; // stick with the chest we're already working on
             if (d < bestD) { bestD = d; best = c; }
@@ -246,6 +274,19 @@ public class AIBrain : MonoBehaviour
         var p = personality;
         // Swerve when someone armed is close, so their bolts can miss.
         driver.Weave = threat != null && Dist(threat.transform.position) < 20f && Current != State.Ram ? 0.55f : 0f;
+
+        if (stormEscape && StormController.Instance != null)
+        {
+            driver.GoTo(StormController.Instance.ClosestSafePoint(transform.position, 10f), 1f);
+            MaybeTurbo(1f);
+            return;
+        }
+        if (pickupGoal != null && (Current == State.Wander || (Current == State.Flee && Dist(pickupGoal.transform.position) < 15f)))
+        {
+            driver.GoTo(pickupGoal.transform.position, 1f);
+            return;
+        }
+
         switch (Current)
         {
             case State.Wander:
@@ -275,10 +316,10 @@ public class AIBrain : MonoBehaviour
                 // Chase budget: after a while, give up on this target and go do something else.
                 if (target != huntingTarget) { huntingTarget = target; huntTime = 0f; }
                 huntTime += dt;
-                if (huntTime > 5f + p.aggression * 6f)
+                if (huntTime > 4f + p.aggression * 4f)
                 {
                     givenUpOn = target;
-                    givenUpUntil = Time.time + 10f - p.aggression * 4f;
+                    givenUpUntil = Time.time + 12f - p.aggression * 4f;
                     Log($"gives up chasing {target.name}");
                     target = null;
                     SetState(chest != null ? State.SeekChest : State.Wander);
@@ -521,7 +562,17 @@ public class AIBrain : MonoBehaviour
     float Dist(Vector3 p) { p -= transform.position; p.y = 0f; return p.magnitude; }
     static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
 
-    Vector3 RandomPoint(List<Vector3> list) => list.Count > 0 ? list[Random.Range(0, list.Count)] : transform.position;
+    /// <summary>A random point from the list that's safe from the storm.</summary>
+    Vector3 RandomPoint(List<Vector3> list)
+    {
+        var storm = StormController.Instance;
+        for (int i = 0; i < 12 && list.Count > 0; i++)
+        {
+            var p = list[Random.Range(0, list.Count)];
+            if (storm == null || storm.IsInsideTarget(p, 4f)) return p;
+        }
+        return storm != null ? storm.ClosestSafePoint(transform.position, 10f) : transform.position;
+    }
 
     static Vector3 NearestTo(List<Vector3> list, Vector3 to, int skip)
     {

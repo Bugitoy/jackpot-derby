@@ -11,13 +11,13 @@ public class AutoBlaster : MonoBehaviour
     [Header("Small blaster")]
     [SerializeField] float smallRange = 12f;
     [SerializeField] float smallInterval = 0.5f;
-    [SerializeField] float smallDamage = 8f;
+    [SerializeField] float smallDamage = 5f;
     [SerializeField] Projectile smallBolt;
 
     [Header("Jackpot cannon")]
     [SerializeField] float jackpotRange = 15f;
     [SerializeField] float jackpotInterval = 0.7f;
-    [SerializeField] float jackpotDamage = 7f;
+    [SerializeField] float jackpotDamage = 5f;
     [SerializeField] int jackpotBurst = 3;
     [SerializeField] float burstSpacing = 0.09f;
     [SerializeField] Projectile jackpotBolt;

@@ -31,6 +31,7 @@ public class ChestSpawner : MonoBehaviour
     void Start()
     {
         if (grid == null) grid = FindAnyObjectByType<ArenaGrid>();
+        if (IsAllowed == null) IsAllowed = p => StormController.Instance == null || StormController.Instance.IsInsideTarget(p, 5f);
         BuildCandidates();
         nextSpawn = firstSpawnTime;
     }

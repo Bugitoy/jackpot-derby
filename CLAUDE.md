@@ -64,11 +64,11 @@ The player only steers; positioning is the skill. Combat is automatic, chunky, r
 - **Chunky health bar** floating above a car only while it's taking damage, fading out ~1.5 s after the
   last hit. It's the car's single health bar.
 - **Turbo (Shift):** 2 s of +40% speed and +50% fire rate, 6 s cooldown, speed lines and a whoosh.
-- Small blaster: range 12 units, 1 bolt every 0.5 s, 8 damage.
-- Jackpot cannon: range 15 units, a 3-burst volley every 0.7 s, 7 damage each.
+- Small blaster: range 12 units, 1 bolt every 0.5 s, 5 damage (tuned down from 8 for match length).
+- Jackpot cannon: range 15 units, a 3-burst volley every 0.7 s, 5 damage each (tuned down from 7).
 - Bolts lead the target with light homing, so swerving can dodge them.
 - **Ramming:** damage to the hit car = relative speed × 1.2 (side or rear hits × 1.5); the rammer takes 30%
-  of that. No damage below a small speed threshold. Unarmed cars must flee, hide, or ram.
+  of that, capped at 30 per hit. No damage below a small speed threshold. Unarmed cars must flee, hide, or ram.
 - Health 0 → eliminated (explosion of coins, car becomes a wrecked_car prop). Last car alive wins.
 
 ## Superstitions and pickups

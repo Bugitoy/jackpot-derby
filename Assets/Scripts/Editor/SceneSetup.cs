@@ -15,6 +15,7 @@ public static class SceneSetup
         SetupPlayerCameraLight();
         SetupGameSystems();
         AISetup.BakeNavMesh();
+        PickupPrefabBuilder.BuildAll();
         EditorSceneManager.SaveOpenScenes();
     }
 
@@ -27,6 +28,7 @@ public static class SceneSetup
         SetupPlayerCameraLight();
         SetupGameSystems();
         AISetup.BakeNavMesh();
+        PickupPrefabBuilder.BuildAll();
         EditorSceneManager.SaveOpenScenes();
     }
 

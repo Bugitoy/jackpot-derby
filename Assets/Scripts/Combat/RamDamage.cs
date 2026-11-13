@@ -17,6 +17,8 @@ public class RamDamage : MonoBehaviour
     [SerializeField] float knockbackPerSpeed = 0.55f;
     [SerializeField] float maxKnockback = 18f;
     [SerializeField] float pairCooldown = 0.6f;
+    [Tooltip("No single ram does more than this.")]
+    [SerializeField] float maxDamage = 30f;
 
     CarMotor motor;
     CarHealth health;
@@ -59,7 +61,7 @@ public class RamDamage : MonoBehaviour
         // Front of the victim facing us = head-on; otherwise it's a side or rear hit.
         Vector3 victimToMe = -toOther;
         bool sideOrRear = Vector3.Dot(Flat(other.transform.forward).normalized, victimToMe) < 0.7f;
-        float damage = rel * damagePerSpeed * (sideOrRear ? sideOrRearMultiplier : 1f);
+        float damage = Mathf.Min(maxDamage, rel * damagePerSpeed * (sideOrRear ? sideOrRearMultiplier : 1f));
         Vector3 point = c.contactCount > 0 ? c.GetContact(0).point : (transform.position + other.transform.position) * 0.5f;
 
         other.health.TakeDamage(damage, identity, DamageKind.Ram, point);
