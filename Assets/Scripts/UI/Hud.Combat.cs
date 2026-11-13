@@ -49,6 +49,11 @@ public partial class Hud
         public BlasterTier shownLayer;
     }
     readonly Dictionary<CarHealth, WorldBar> worldBars = new Dictionary<CarHealth, WorldBar>();
+
+    // Small odometer number floating over each AI car (gold when locked).
+    class FloatingNumber { public RectTransform root; public Image back; public TextMeshProUGUI text; public Odometer odo; public CarHealth health; }
+    readonly List<FloatingNumber> floatingNumbers = new List<FloatingNumber>();
+    readonly HashSet<CarIdentity> floatingFor = new HashSet<CarIdentity>();
     RectTransform worldBarLayer, damageLayer;
 
     // Damage numbers
@@ -383,9 +388,24 @@ public partial class Hud
         {
             var h = id.GetComponent<CarHealth>();
             if (h != null && !worldBars.ContainsKey(h)) worldBars[h] = MakeWorldBar(h, id);
+            if (!id.isPlayer && h != null && floatingFor.Add(id)) floatingNumbers.Add(MakeFloatingNumber(id, h));
         }
         Vector2 size = canvasRect.rect.size;
         float dt = Time.deltaTime;
+
+        foreach (var fnum in floatingNumbers)
+        {
+            bool alive = fnum.health != null && fnum.health.IsAlive && fnum.odo != null;
+            Vector3 vp = alive ? cam.WorldToViewportPoint(fnum.health.transform.position + Vector3.up * 4.4f) : Vector3.back;
+            bool show = alive && vp.z > 0f && vp.x > -0.05f && vp.x < 1.05f && vp.y > -0.05f && vp.y < 1.05f;
+            fnum.root.gameObject.SetActive(show);
+            if (!show) continue;
+            fnum.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y + 42f);
+            bool locked = fnum.odo.IsLocked;
+            fnum.text.text = fnum.odo.Number.ToString("00");
+            fnum.back.color = locked ? reelLockedColor : new Color(0.08f, 0.12f, 0.14f, 0.9f);
+            fnum.text.color = locked ? digitColor : reelColor;
+        }
         foreach (var kv in worldBars)
         {
             var b = kv.Value;
@@ -419,6 +439,22 @@ public partial class Hud
             b.pop = Mathf.Max(0f, b.pop - dt * 6f);
             b.root.localScale = Vector3.one * (1f + 0.12f * b.pop);
         }
+    }
+
+    FloatingNumber MakeFloatingNumber(CarIdentity id, CarHealth h)
+    {
+        var f = new FloatingNumber { health = h, odo = id.GetComponent<Odometer>() };
+        f.root = NewRect("Number_" + id.displayName, worldBarLayer, Vector2.zero, new Vector2(44f, 26f));
+        f.root.anchorMin = f.root.anchorMax = Vector2.zero;
+        f.back = NewImage("Back", f.root, UISprites.RoundedRect, Color.black);
+        Stretch(f.back.rectTransform);
+        var edge = NewImage("Edge", f.root, UISprites.RoundedRect, id.color);
+        Anchor(edge.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 1.5f), new Vector2(36f, 3f));
+        f.text = NewText("Value", f.root, "00", 20, Color.white);
+        f.text.fontStyle = FontStyles.Bold;
+        Stretch(f.text.rectTransform);
+        f.root.gameObject.SetActive(false);
+        return f;
     }
 
     WorldBar MakeWorldBar(CarHealth h, CarIdentity id)

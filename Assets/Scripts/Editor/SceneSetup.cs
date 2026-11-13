@@ -14,6 +14,7 @@ public static class SceneSetup
         ChestPrefabBuilder.BuildAll();
         SetupPlayerCameraLight();
         SetupGameSystems();
+        AISetup.BakeNavMesh();
         EditorSceneManager.SaveOpenScenes();
     }
 
@@ -25,6 +26,7 @@ public static class SceneSetup
         ChestPrefabBuilder.BuildAll();
         SetupPlayerCameraLight();
         SetupGameSystems();
+        AISetup.BakeNavMesh();
         EditorSceneManager.SaveOpenScenes();
     }
 

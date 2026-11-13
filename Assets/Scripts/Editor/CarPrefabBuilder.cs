@@ -106,7 +106,12 @@ public static class CarPrefabBuilder
         root.AddComponent<CarWreck>();
 
         if (player) root.AddComponent<PlayerCarInput>();
-        else root.AddComponent<ScriptedCarInput>(); // the AI driver replaces this in Milestone 5
+        else
+        {
+            root.AddComponent<AICarDriver>();
+            var brain = root.AddComponent<AIBrain>();
+            ModelPrefabUtil.SetField(brain, "personality", AISetup.Personality(name));
+        }
 
         int carLayer = LayerMask.NameToLayer("Car");
         if (carLayer >= 0) foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = carLayer;
