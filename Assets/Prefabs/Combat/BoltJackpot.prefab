@@ -171,6 +171,8 @@ MonoBehaviour:
   hitColor: {r: 1, g: 0.55, b: 0.15, a: 1}
   hitScale: 1.25
   spin: 720
+  homing: 0.2
+  hitRadius: 2.1
 --- !u!1 &3233016248690824867
 GameObject:
   m_ObjectHideFlags: 0

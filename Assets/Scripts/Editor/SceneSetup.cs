@@ -13,9 +13,11 @@ public static class SceneSetup
         CarPrefabBuilder.BuildAll();
         ChestPrefabBuilder.BuildAll();
         SetupPlayerCameraLight();
+        LookSetup.Apply();
         SetupGameSystems();
         AISetup.BakeNavMesh();
         PickupPrefabBuilder.BuildAll();
+        SceneryKit.CompressGameplayTextures();
         EditorSceneManager.SaveOpenScenes();
     }
 
@@ -26,9 +28,11 @@ public static class SceneSetup
         CarPrefabBuilder.BuildAll();
         ChestPrefabBuilder.BuildAll();
         SetupPlayerCameraLight();
+        LookSetup.Apply();
         SetupGameSystems();
         AISetup.BakeNavMesh();
         PickupPrefabBuilder.BuildAll();
+        SceneryKit.CompressGameplayTextures();
         EditorSceneManager.SaveOpenScenes();
     }
 

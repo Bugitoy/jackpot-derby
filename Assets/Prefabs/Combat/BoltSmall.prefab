@@ -351,3 +351,5 @@ MonoBehaviour:
   hitColor: {r: 0.35, g: 1, b: 0.75, a: 1}
   hitScale: 1
   spin: 720
+  homing: 0.2
+  hitRadius: 2.1
