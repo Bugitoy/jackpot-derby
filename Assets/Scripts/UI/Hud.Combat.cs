@@ -8,8 +8,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Combat half of the HUD: player health + blaster bars, chunky bars floating over every car,
-/// pop-up damage numbers, Turbo / Jackpot Blast cooldown icons, countdown, match timer,
-/// kill feed, hit vignette, 777 flash, BUSTED popup and the results screen.
+/// pop-up damage numbers, Turbo cooldown icon, countdown, match timer,
+/// kill feed, hit vignette, BUSTED popup and the results screen.
 /// </summary>
 public partial class Hud
 {
@@ -27,11 +27,10 @@ public partial class Hud
     GameObject blasterRow;
     CarHealth pHealth;
     TurboAbility pTurbo;
-    JackpotBlast pBlast;
 
     // Abilities
-    Image turboFill, blastFill, turboBack, blastBack;
-    TextMeshProUGUI turboKey, blastKey, blastIcon;
+    Image turboFill, turboBack;
+    TextMeshProUGUI turboKey;
 
     // Floating bar over each car: one bar, only while it's being hit, showing its outermost layer
     // (Jackpot cannon bar -> small blaster bar -> car health).
@@ -115,8 +114,7 @@ public partial class Hud
         Outline(hpText);
 
         // Ability icons, bottom-right.
-        MakeAbility(new Vector2(-170f, 72f), "TURBO", "SHIFT", TealBar, out turboBack, out turboFill, out turboKey, out _);
-        MakeAbility(new Vector2(-80f, 72f), "777", "SPACE", GoldBar, out blastBack, out blastFill, out blastKey, out blastIcon);
+        MakeAbility(new Vector2(-80f, 72f), "TURBO", "SHIFT", TealBar, out turboBack, out turboFill, out turboKey, out _);
 
         // Top: timer + cars left.
         timerText = NewText("MatchTimer", canvasRect, "0:00", 34, Color.white);
@@ -235,10 +233,8 @@ public partial class Hud
     {
         pHealth = player.GetComponent<CarHealth>();
         pTurbo = player.GetComponent<TurboAbility>();
-        pBlast = player.GetComponent<JackpotBlast>();
         nameText.text = player.displayName.ToUpper();
         if (pHealth != null) pHealth.Damaged += _ => vignette = 0.55f;
-        if (pBlast != null) pBlast.Activated += _ => On777();
         if (pTurbo != null) pTurbo.Activated += () => CameraShake.Add(0.15f);
     }
 
@@ -260,13 +256,6 @@ public partial class Hud
     {
         ShowPopup("BUSTED!", HpRed, newTier == BlasterTier.Small ? "demoted to the small blaster" : "blaster lost - find a chest!");
         CameraShake.Add(0.35f);
-    }
-
-    void On777()
-    {
-        ShowPopup("7  7  7", GoldBar, "JACKPOT BLAST!");
-        flashAlpha = 0.45f;
-        CameraShake.Add(0.55f);
     }
 
     void OnAnyDamaged(DamageInfo d)
@@ -384,18 +373,6 @@ public partial class Hud
             float pulse = pTurbo.IsReady ? 1f + 0.05f * Mathf.Sin(Time.time * 5f) : 1f;
             turboBack.rectTransform.localScale = Vector3.one * (pTurbo.IsActive ? 1.12f : pulse);
             turboFill.color = pTurbo.IsReady || pTurbo.IsActive ? TealBar : new Color(0.3f, 0.5f, 0.5f);
-        }
-        if (pBlast != null)
-        {
-            bool available = pBlast.IsAvailable;
-            blastBack.gameObject.SetActive(available);
-            if (available)
-            {
-                blastFill.fillAmount = pBlast.Readiness;
-                blastFill.color = pBlast.IsReady ? GoldBar : new Color(0.55f, 0.45f, 0.2f);
-                float pulse = pBlast.IsReady ? 1f + 0.06f * Mathf.Sin(Time.time * 6f) : 1f;
-                blastBack.rectTransform.localScale = Vector3.one * pulse;
-            }
         }
     }
 

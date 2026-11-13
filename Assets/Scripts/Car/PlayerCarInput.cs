@@ -13,7 +13,6 @@ public class PlayerCarInput : CarInputSource
     float throttle;
     Odometer odometer;
     TurboAbility turbo;
-    JackpotBlast blast;
 
     public override float Throttle => throttle;
     public override float Steer => steer;
@@ -22,7 +21,6 @@ public class PlayerCarInput : CarInputSource
     {
         odometer = GetComponent<Odometer>();
         turbo = GetComponent<TurboAbility>();
-        blast = GetComponent<JackpotBlast>();
     }
 
     void Update()
@@ -32,7 +30,6 @@ public class PlayerCarInput : CarInputSource
 
         if (k.rKey.wasPressedThisFrame && odometer != null) odometer.Unlock();
         if ((k.leftShiftKey.wasPressedThisFrame || k.rightShiftKey.wasPressedThisFrame) && turbo != null) turbo.TryActivate();
-        if (k.spaceKey.wasPressedThisFrame && blast != null) blast.TryActivate();
 
         float t = 0f;
         if (k.wKey.isPressed || k.upArrowKey.isPressed) t += 1f;

@@ -102,7 +102,6 @@ public static class CarPrefabBuilder
         ModelPrefabUtil.SetField(blaster, "rangeRing", ringRenderer);
         root.AddComponent<RamDamage>();
         root.AddComponent<TurboAbility>();
-        root.AddComponent<JackpotBlast>();
         root.AddComponent<CarFx>();
         root.AddComponent<CarWreck>();
 

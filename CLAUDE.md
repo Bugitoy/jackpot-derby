@@ -22,7 +22,6 @@ and give a second health bar; lose it and you're demoted. A Bad Luck Storm shrin
 - W / Up: accelerate · S / Down: brake, then reverse · A D / Left Right: steer
 - Blasters fire **automatically** (see Combat feel) — the player only drives
 - Shift: **Turbo** (short boost to speed and fire rate, 6 s cooldown)
-- Space: **Jackpot Blast** special (Jackpot cannon only, 8 s cooldown)
 - R: unlock your number so it rolls again · Esc: pause
 
 ## The odometer number (core luck mechanic)
@@ -65,8 +64,6 @@ The player only steers; positioning is the skill. Combat is automatic, chunky, r
   last hit. Only one bar shows: the outermost layer the car still has (Jackpot cannon bar → small blaster
   bar → car health). When a layer is shot away, the next one down takes its place.
 - **Turbo (Shift):** 2 s of +40% speed and +50% fire rate, 6 s cooldown, speed lines and a whoosh.
-- **Jackpot Blast (Space, Jackpot cannon only):** a big area blast in front of the car, 25 damage,
-  knockback, 8 s cooldown, a slot-reel "777" flash on screen.
 - Small blaster: bar 50, range 12 units, 1 bolt every 0.5 s, 8 damage.
 - Jackpot cannon: bar 80, range 15 units, a 3-burst volley every 0.7 s, 7 damage each.
 - Blaster bar hits 0 → **demoted** one tier (Jackpot → small with a 30 bar, small → none).
@@ -153,7 +150,7 @@ Old road game pieces (road_slab and variants) are optional decoration only.
 2. Graybox arena + arcade car controller + chase camera. Driving must feel fun.
    Then a **WebGL test build**.
 3. Odometer number, locking, hints, chests, getting blasters.
-4. Combat: Squad Busters-style auto-fire, Turbo, Jackpot Blast, health + blaster bar, demotion,
+4. Combat: Squad Busters-style auto-fire, Turbo, health + blaster bar, demotion,
    ramming, elimination, win/lose, restart.
 5. AI opponents with personalities.
 6. Storm, black cats, dice, clovers; tune match length.
