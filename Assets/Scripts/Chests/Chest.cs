@@ -78,6 +78,7 @@ public class Chest : MonoBehaviour
         }
         if (beam != null)
         {
+            if (beamProps == null) { beamProps = new MaterialPropertyBlock(); beamColor = beam.sharedMaterial.GetColor("_BaseColor"); }
             var c = beamColor;
             c.a *= 0.75f + 0.25f * Mathf.Sin(age * 3f);
             beamProps.SetColor("_BaseColor", c);

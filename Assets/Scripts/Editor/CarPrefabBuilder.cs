@@ -112,10 +112,39 @@ public static class CarPrefabBuilder
     {
         var holder = new GameObject(name);
         holder.transform.SetParent(mount, false);
-        ModelPrefabUtil.PlaceModel(modelPath, holder.transform, size, 90f);
-        // PlaceModel centres relative to the holder's world position; holder sits at the mount.
+        var model = ModelPrefabUtil.PlaceModel(modelPath, holder.transform, size, 90f);
+        // PlaceModel centres the whole model, barrel included, which leaves the base plate behind the
+        // mount. Shift it so the base plate (the bottom slice of the model) is centred on the roof.
+        if (model != null)
+        {
+            Vector3 baseCentre = BottomSliceCentre(model, 0.15f) - holder.transform.position;
+            model.transform.localPosition -= new Vector3(baseCentre.x, 0f, baseCentre.z);
+        }
         holder.SetActive(false);
         return holder;
+    }
+
+    /// <summary>World-space centre (x/z extents) of the vertices in the lowest `fraction` of the model's height.</summary>
+    static Vector3 BottomSliceCentre(GameObject model, float fraction)
+    {
+        var filters = model.GetComponentsInChildren<MeshFilter>();
+        float minY = float.MaxValue, maxY = float.MinValue;
+        foreach (var mf in filters)
+            foreach (var v in mf.sharedMesh.vertices)
+            {
+                float y = mf.transform.TransformPoint(v).y;
+                minY = Mathf.Min(minY, y); maxY = Mathf.Max(maxY, y);
+            }
+        float cut = minY + (maxY - minY) * fraction;
+        Vector3 lo = new Vector3(float.MaxValue, 0f, float.MaxValue), hi = new Vector3(float.MinValue, 0f, float.MinValue);
+        foreach (var mf in filters)
+            foreach (var v in mf.sharedMesh.vertices)
+            {
+                Vector3 p = mf.transform.TransformPoint(v);
+                if (p.y > cut) continue;
+                lo = Vector3.Min(lo, p); hi = Vector3.Max(hi, p);
+            }
+        return lo.x == float.MaxValue ? model.transform.position : new Vector3((lo.x + hi.x) / 2f, minY, (lo.z + hi.z) / 2f);
     }
 
     static PhysicsMaterial CarPhysicsMaterial()
