@@ -3,7 +3,31 @@ using UnityEngine;
 /// <summary>Simple UI shapes drawn in code at startup (rounded box, circle, ring, triangle), so the HUD needs no image files.</summary>
 public static class UISprites
 {
-    static Sprite rounded, circle, ring, triangle;
+    static Sprite rounded, circle, ring, triangle, vignette;
+
+    /// <summary>Clear in the middle, solid at the edges (for the "you got hit" red flash).</summary>
+    public static Sprite Vignette
+    {
+        get
+        {
+            if (vignette != null) return vignette;
+            const int size = 128;
+            var tex = NewTex(size);
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+                float d = Mathf.Sqrt(dx * dx + dy * dy) / 1.414f;
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.45f, 1f, d));
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            vignette = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return vignette;
+        }
+    }
 
     public static Sprite RoundedRect { get { if (rounded == null) rounded = MakeRounded(64, 18); return rounded; } }
     public static Sprite Circle { get { if (circle == null) circle = MakeCircle(128, 0f); return circle; } }

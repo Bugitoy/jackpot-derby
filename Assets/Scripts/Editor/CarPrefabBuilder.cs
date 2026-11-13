@@ -14,10 +14,18 @@ public static class CarPrefabBuilder
     public static float SmallBlasterSize = 1.4f;
     public static float JackpotBlasterSize = 1.7f;
 
+    public static readonly (string prefab, string model, string name, Color color, string spawn)[] Enemies =
+    {
+        ("EnemyLucky8", "Assets/Models/enemy_car_red.glb", "Lucky 8", new Color(0.95f, 0.25f, 0.25f), "Spawn_Lucky8"),
+        ("EnemyBlackCat13", "Assets/Models/enemy_car_purple.glb", "Black Cat 13", new Color(0.70f, 0.45f, 1f), "Spawn_BlackCat13"),
+        ("EnemyDoubleDice11", "Assets/Models/enemy_car_orange.glb", "Double Dice 11", new Color(1f, 0.6f, 0.15f), "Spawn_DoubleDice11"),
+    };
+
     [MenuItem("Jackpot Derby/Build Car Prefabs")]
     public static void BuildAll()
     {
-        Build("PlayerCar", "Assets/Models/car.glb", "Lucky 7", new Color(0.15f, 0.70f, 0.70f), true);
+        Build("PlayerCar", "Assets/Models/car.glb", "Lucky 7", new Color(0.25f, 0.90f, 0.85f), true);
+        foreach (var e in Enemies) Build(e.prefab, e.model, e.name, e.color, false);
         AssetDatabase.SaveAssets();
     }
 
@@ -75,7 +83,34 @@ public static class CarPrefabBuilder
         id.displayName = displayName;
         id.color = color;
         id.isPlayer = player;
+
+        // Combat.
+        var ring = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        ring.name = "RangeRing";
+        Object.DestroyImmediate(ring.GetComponent<Collider>());
+        ring.transform.SetParent(root.transform, false);
+        ring.transform.localPosition = new Vector3(0f, 0.07f, 0f);
+        ring.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        var ringRenderer = ring.GetComponent<Renderer>();
+        ringRenderer.sharedMaterial = CombatAssetBuilder.RangeRingMaterial();
+        ringRenderer.enabled = false;
+        ModelPrefabUtil.NoShadows(ring);
+
+        var blaster = root.AddComponent<AutoBlaster>();
+        ModelPrefabUtil.SetField(blaster, "smallBolt", AssetDatabase.LoadAssetAtPath<Projectile>(CombatAssetBuilder.SmallBoltPath));
+        ModelPrefabUtil.SetField(blaster, "jackpotBolt", AssetDatabase.LoadAssetAtPath<Projectile>(CombatAssetBuilder.JackpotBoltPath));
+        ModelPrefabUtil.SetField(blaster, "rangeRing", ringRenderer);
+        root.AddComponent<RamDamage>();
+        root.AddComponent<TurboAbility>();
+        root.AddComponent<JackpotBlast>();
+        root.AddComponent<CarFx>();
+        root.AddComponent<CarWreck>();
+
         if (player) root.AddComponent<PlayerCarInput>();
+        else root.AddComponent<ScriptedCarInput>(); // the AI driver replaces this in Milestone 5
+
+        int carLayer = LayerMask.NameToLayer("Car");
+        if (carLayer >= 0) foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = carLayer;
 
         string path = $"Assets/Prefabs/Cars/{name}.prefab";
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);

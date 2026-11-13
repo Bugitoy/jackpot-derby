@@ -85,7 +85,24 @@ public class CarLoadout : MonoBehaviour
         TierChanged?.Invoke(tier);
     }
 
-    /// <summary>Blaster bar emptied: Jackpot → small (30 bar), small → none. (Used in Milestone 4.)</summary>
+    /// <summary>Fired when the blaster bar runs out and the car is demoted ("BUSTED").</summary>
+    public event Action<BlasterTier> Busted;
+
+    /// <summary>Soak up damage with the blaster bar. Returns how much it absorbed.</summary>
+    public float AbsorbDamage(float amount)
+    {
+        if (!IsArmed || BlasterBar <= 0f) return 0f;
+        float used = Mathf.Min(amount, BlasterBar);
+        BlasterBar -= used;
+        if (BlasterBar <= 0.01f)
+        {
+            Demote();
+            Busted?.Invoke(Tier);
+        }
+        return used;
+    }
+
+    /// <summary>Blaster bar emptied: Jackpot → small (30 bar), small → none.</summary>
     public void Demote()
     {
         if (Tier == BlasterTier.Jackpot) SetTier(BlasterTier.Small, demotedSmallBar);

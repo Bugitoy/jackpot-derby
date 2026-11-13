@@ -9,6 +9,7 @@ public static class SceneSetup
     public static void RebuildAll()
     {
         ArenaBuilder.BuildArena();
+        CombatAssetBuilder.BuildAll();
         CarPrefabBuilder.BuildAll();
         ChestPrefabBuilder.BuildAll();
         SetupPlayerCameraLight();
@@ -19,6 +20,7 @@ public static class SceneSetup
     [MenuItem("Jackpot Derby/Rebuild Prefabs + Systems (keep arena)")]
     public static void RebuildPrefabsAndSystems()
     {
+        CombatAssetBuilder.BuildAll();
         CarPrefabBuilder.BuildAll();
         ChestPrefabBuilder.BuildAll();
         SetupPlayerCameraLight();
@@ -72,6 +74,15 @@ public static class SceneSetup
         if (hud == null) hud = sys.AddComponent<Hud>();
         ModelPrefabUtil.SetField(hud, "outlinedText", OutlinedFontMaterial());
         if (sys.GetComponent<DebugCheats>() == null) sys.AddComponent<DebugCheats>();
+        if (sys.GetComponent<MatchManager>() == null) sys.AddComponent<MatchManager>();
+
+        var fx = sys.GetComponent<FxLibrary>();
+        if (fx == null) fx = sys.AddComponent<FxLibrary>();
+        ModelPrefabUtil.SetField(fx, "glowMaterial", CombatAssetBuilder.ParticleMaterial("FxGlow", true));
+        ModelPrefabUtil.SetField(fx, "puffMaterial", CombatAssetBuilder.ParticleMaterial("FxPuff", false));
+        ModelPrefabUtil.SetField(fx, "coinMaterial", CombatAssetBuilder.CoinMaterial());
+        ModelPrefabUtil.SetField(fx, "coinMesh", CombatAssetBuilder.CoinMesh());
+        ModelPrefabUtil.SetField(fx, "ringMaterial", CombatAssetBuilder.RingParticleMaterial());
         EditorSceneManager.MarkSceneDirty(sys.scene);
     }
 
@@ -85,6 +96,18 @@ public static class SceneSetup
         var player = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         player.name = "PlayerCar";
         if (spawn != null) player.transform.SetPositionAndRotation(spawn.transform.position, spawn.transform.rotation);
+
+        // Enemy cars in their garages (they just sit there until the AI arrives in Milestone 5).
+        foreach (var e in CarPrefabBuilder.Enemies)
+        {
+            var existing = GameObject.Find(e.prefab);
+            if (existing != null) Object.DestroyImmediate(existing);
+            var ePrefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Prefabs/Cars/{e.prefab}.prefab");
+            var enemy = (GameObject)PrefabUtility.InstantiatePrefab(ePrefab);
+            enemy.name = e.prefab;
+            var eSpawn = GameObject.Find(e.spawn);
+            if (eSpawn != null) enemy.transform.SetPositionAndRotation(eSpawn.transform.position, eSpawn.transform.rotation);
+        }
 
         // Camera.
         var cam = Camera.main;
@@ -100,6 +123,7 @@ public static class SceneSetup
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = new Color(0.55f, 0.70f, 0.80f);
         if (cam.GetComponent<FpsCounter>() == null) cam.gameObject.AddComponent<FpsCounter>();
+        if (cam.GetComponent<CameraShake>() == null) cam.gameObject.AddComponent<CameraShake>();
 
         // Sun.
         var light = Object.FindAnyObjectByType<Light>();

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// The player's HUD, built in code at startup: odometer reels with padlock, hint line,
 /// big popups (TOO HIGH, LUCKY!, SMALL BLASTER!...), blaster status, and chest markers/arrows.
 /// </summary>
-public class Hud : MonoBehaviour
+public partial class Hud : MonoBehaviour
 {
     [Header("Look")]
     [SerializeField] Color panelColor = new Color(0.08f, 0.16f, 0.18f, 0.92f);
@@ -33,7 +33,7 @@ public class Hud : MonoBehaviour
     RectTransform tensColumn, onesColumn;
     Image tensWindow, onesWindow, padBody, padShackle;
     RectTransform padShackleRect;
-    TextMeshProUGUI hintLine, blasterLine, popupText, popupSub, cheatLine;
+    TextMeshProUGUI hintLine, popupText, popupSub, cheatLine;
     RectTransform popupRect;
     float popupAge = 99f;
     float shownValue;
@@ -49,9 +49,14 @@ public class Hud : MonoBehaviour
         Instance = this;
         cam = Camera.main;
         BuildCanvas();
+        BuildCombatUI();
     }
 
-    void Start() => TryBindPlayer();
+    void Start()
+    {
+        TryBindPlayer();
+        BindMatch();
+    }
 
     void TryBindPlayer()
     {
@@ -70,9 +75,9 @@ public class Hud : MonoBehaviour
         if (loadout != null)
         {
             loadout.RewardMessage += (msg, col) => ShowPopup(msg, col, "");
-            loadout.TierChanged += _ => RefreshBlasterLine();
+            loadout.Busted += OnPlayerBusted;
         }
-        RefreshBlasterLine();
+        BindPlayerCombat();
     }
 
     // ---------------- building ----------------
@@ -117,11 +122,6 @@ public class Hud : MonoBehaviour
         hintLine.fontStyle = FontStyles.Bold;
         Outline(hintLine);
 
-        blasterLine = NewText("BlasterLine", canvasRect, "", 20, Color.white);
-        blasterLine.alignment = TextAlignmentOptions.Left;
-        Anchor(blasterLine.rectTransform, new Vector2(0f, 0f), new Vector2(170f, 40f), new Vector2(300f, 30f));
-        Outline(blasterLine);
-
         // Big popup.
         popupText = NewText("Popup", canvasRect, "", 78, Color.white);
         popupText.fontStyle = FontStyles.Bold;
@@ -133,9 +133,9 @@ public class Hud : MonoBehaviour
         Outline(popupSub);
         popupText.gameObject.SetActive(false);
 
-        cheatLine = NewText("CheatHelp", canvasRect, "", 14, new Color(1f, 1f, 1f, 0.7f));
-        cheatLine.alignment = TextAlignmentOptions.TopRight;
-        Anchor(cheatLine.rectTransform, new Vector2(1f, 1f), new Vector2(-190f, -40f), new Vector2(360f, 60f));
+        cheatLine = NewText("CheatHelp", canvasRect, "", 13, new Color(1f, 1f, 1f, 0.7f));
+        cheatLine.alignment = TextAlignmentOptions.TopLeft;
+        Anchor(cheatLine.rectTransform, new Vector2(0f, 1f), new Vector2(200f, -60f), new Vector2(380f, 60f));
     }
 
     Image MakeReel(RectTransform parent, Vector2 pos, out RectTransform column)
@@ -172,8 +172,10 @@ public class Hud : MonoBehaviour
         if (odometer != null) UpdateReels();
         UpdatePopup();
         UpdateMarkers();
-        if (loadout != null) RefreshBlasterLine();
-        cheatLine.text = DebugCheats.Active ? "CHEATS  F2 show chest numbers\nF3 match nearest chest  F4 close (+3)  F5 spawn chest" : "";
+        UpdateCombatUI();
+        cheatLine.text = DebugCheats.Active
+            ? "CHEATS  F2 chest numbers  F3 exact  F4 close  F5 spawn chest\nF6 arm enemies  F7 hurt me  F8 give me Jackpot  F9 kill nearest"
+            : "";
     }
 
     void UpdateReels()
@@ -298,20 +300,6 @@ public class Hud : MonoBehaviour
         m.arrow = NewImage("Arrow", m.root, UISprites.Triangle, gold);
         Anchor(m.arrow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 34f), new Vector2(26f, 22f));
         return m;
-    }
-
-    void RefreshBlasterLine()
-    {
-        if (loadout == null) { blasterLine.text = ""; return; }
-        switch (loadout.Tier)
-        {
-            case BlasterTier.Small:
-                blasterLine.text = $"<color=#4DF2CC>SMALL BLASTER</color>  {Mathf.CeilToInt(loadout.BlasterBar)}/{loadout.BlasterBarMax:0}"; break;
-            case BlasterTier.Jackpot:
-                blasterLine.text = $"<color=#FFD126>JACKPOT CANNON</color>  {Mathf.CeilToInt(loadout.BlasterBar)}/{loadout.BlasterBarMax:0}"; break;
-            default:
-                blasterLine.text = "<color=#BBBBBB>NO BLASTER</color> - find a chest!"; break;
-        }
     }
 
     // ---------------- tiny UI helpers ----------------

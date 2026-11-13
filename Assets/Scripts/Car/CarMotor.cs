@@ -34,6 +34,10 @@ public class CarMotor : MonoBehaviour
     Rigidbody rb;
     CarInputSource input;
     float stunTimer;
+    Vector3 lastGroundedPosition;
+
+    /// <summary>The velocity we drove with this step, before physics resolved any crash (used for ram damage).</summary>
+    public Vector3 LastVelocity { get; private set; }
 
     /// <summary>Signed speed along the car's nose (negative = reversing).</summary>
     public float ForwardSpeed { get; private set; }
@@ -52,6 +56,7 @@ public class CarMotor : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         input = GetComponent<CarInputSource>();
+        lastGroundedPosition = transform.position;
     }
 
     void FixedUpdate()
@@ -68,7 +73,11 @@ public class CarMotor : MonoBehaviour
         float f = Vector3.Dot(v, fwd);
         float s = Vector3.Dot(v, right);
 
-        if (!IsGrounded) { ForwardSpeed = f; return; }
+        // Safety net: if physics ever pushes us through the world, go back to the last good spot.
+        if (IsGrounded && transform.position.y > -0.5f) lastGroundedPosition = transform.position;
+        else if (transform.position.y < -2f) { Teleport(lastGroundedPosition + Vector3.up * 0.3f, transform.rotation); return; }
+
+        if (!IsGrounded) { ForwardSpeed = f; LastVelocity = v; return; }
 
         // While knocked back, ignore the driver and slide (low grip).
         bool stunned = stunTimer > 0f;
@@ -100,6 +109,7 @@ public class CarMotor : MonoBehaviour
 
         s = Mathf.Lerp(s, 0f, 1f - Mathf.Exp(-gripNow * dt));
         rb.linearVelocity = fwd * f + right * s + Vector3.up * Mathf.Min(v.y, 0f);
+        LastVelocity = rb.linearVelocity;
         ForwardSpeed = f;
 
         // Steering: needs some speed, a little weaker at top speed, flips when reversing.
