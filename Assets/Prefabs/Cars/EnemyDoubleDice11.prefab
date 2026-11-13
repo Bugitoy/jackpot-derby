@@ -62,7 +62,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3295341019940415066}
+  - {fileID: 2529618762107203600}
   m_Father: {fileID: 2990567047464376043}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4962842457083102277
@@ -244,9 +244,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de6a0f8d55be78b4684200865ca3e866, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarLoadout
-  smallBarMax: 50
-  jackpotBarMax: 80
-  demotedSmallBar: 30
   smallBlasterVisual: {fileID: 3266939854996093377}
   jackpotBlasterVisual: {fileID: 5152505411472342402}
   mount: {fileID: 2990567047464376043}
@@ -553,7 +550,7 @@ Transform:
   - {fileID: 2990567047464376043}
   m_Father: {fileID: 7494905938118235578}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &1441371573890322500
+--- !u!1001 &1918711705569216014
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -686,10 +683,10 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: -4161369568681901532, guid: f9a3437229e339641b8a2ad9f8eaff46, type: 3}
---- !u!4 &3295341019940415066 stripped
+--- !u!4 &2529618762107203600 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4160095693325104670, guid: f9a3437229e339641b8a2ad9f8eaff46, type: 3}
-  m_PrefabInstance: {fileID: 1441371573890322500}
+  m_PrefabInstance: {fileID: 1918711705569216014}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4705797352604928215
 PrefabInstance:

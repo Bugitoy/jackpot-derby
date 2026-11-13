@@ -16,7 +16,7 @@ A 4-car combat arena in a cartoon city block. The player starts in one corner ga
 others. Every car's number is an **odometer** that rolls like slot-machine reels as it drives. Chests appear
 with a hidden lucky number; stop to lock your number and get a TOO HIGH / TOO LOW / CLOSE hint, then ram
 the chest with a close enough number to win a **blaster**. Blasters auto-fire at nearby enemies (Squad Busters style)
-and give a second health bar; lose it and you're demoted. A Bad Luck Storm shrinks the arena. **Last car standing wins.**
+and stay on your car until it's destroyed. A Bad Luck Storm shrinks the arena. **Last car standing wins.**
 
 ## Controls (keyboard)
 - W / Up: accelerate · S / Down: brake, then reverse · A D / Left Right: steer
@@ -43,14 +43,15 @@ and give a second health bar; lose it and you're demoted. A Bad Luck Storm shrin
 - **Ram it** to try to open it, using your current number:
   - exact or within ±5 → opens it and upgrades you **one step**: no blaster → **small blaster** →
     **Jackpot cannon**. The Jackpot cannon is only ever an upgrade of the small blaster (you can't skip
-    straight to it). Already have the cannon → its blaster bar is refilled.
+    straight to it). Already have the cannon → full repair.
   - exact (LUCKY!) also gives a **full repair** on top of the upgrade
   - too far off → you bounce off (knockback, no damage) and the chest stays
 - Every so often (1 in 4) a **Jackpot chest** (chest_jackpot model) spawns: same upgrade rules, plus a full
   repair even when you're only close.
 
-## Health, blasters, demotion
-- Car health: 100. Blaster bar sits on top of it and absorbs damage first.
+## Health and blasters
+- Car health: 100, one bar. All damage comes off it. Health 0 → the car is destroyed, whatever blaster it
+  carries. There is no separate blaster bar and no demotion: a blaster stays until the car is destroyed.
 ### Combat feel: like Supercell's Squad Busters
 The player only steers; positioning is the skill. Combat is automatic, chunky, readable and juicy.
 - **Auto-targeting:** an armed car automatically turns its blaster toward and fires at the nearest enemy
@@ -61,12 +62,11 @@ The player only steers; positioning is the skill. Combat is automatic, chunky, r
 - **Hits feel big:** white hit flash on the target, squash-and-stretch on impact, a puff/pop effect,
   floating damage numbers that pop up and fade, small screen shake when the player is hit or hits.
 - **Chunky health bar** floating above a car only while it's taking damage, fading out ~1.5 s after the
-  last hit. Only one bar shows: the outermost layer the car still has (Jackpot cannon bar → small blaster
-  bar → car health). When a layer is shot away, the next one down takes its place.
+  last hit. It's the car's single health bar.
 - **Turbo (Shift):** 2 s of +40% speed and +50% fire rate, 6 s cooldown, speed lines and a whoosh.
-- Small blaster: bar 50, range 12 units, 1 bolt every 0.5 s, 8 damage.
-- Jackpot cannon: bar 80, range 15 units, a 3-burst volley every 0.7 s, 7 damage each.
-- Blaster bar hits 0 → **demoted** one tier (Jackpot → small with a 30 bar, small → none).
+- Small blaster: range 12 units, 1 bolt every 0.5 s, 8 damage.
+- Jackpot cannon: range 15 units, a 3-burst volley every 0.7 s, 7 damage each.
+- Bolts lead the target with light homing, so swerving can dodge them.
 - **Ramming:** damage to the hit car = relative speed × 1.2 (side or rear hits × 1.5); the rammer takes 30%
   of that. No damage below a small speed threshold. Unarmed cars must flee, hide, or ram.
 - Health 0 → eliminated (explosion of coins, car becomes a wrecked_car prop). Last car alive wins.
@@ -139,9 +139,9 @@ Old road game pieces (road_slab and variants) are optional decoration only.
 ## Presentation
 - High three-quarter top-down camera, Squad Busters style (matching Docs/map_reference.png): follows
   the player smoothly, high enough to see attack ranges and nearby enemies around buildings.
-- HUD: car health + blaster bar, odometer reels with padlock, hint popups, chest arrows, enemy health bars
+- HUD: car health + current blaster, odometer reels with padlock, hint popups, chest arrows, enemy health bars
   over cars, kill feed, storm timer, match timer.
-- Juice: hit flashes, screen shake, coin bursts, chest light beams, demotion "BUSTED" popup, LUCKY! popup.
+- Juice: hit flashes, screen shake, coin bursts, chest light beams, TAKEDOWN / WRECKED popups, LUCKY! popup.
 - Results screen: placement (1st–4th), trophy for 1st, wins counter saved with PlayerPrefs, Play Again.
 - Main menu: title, Play, How to Play. Stretch: a spinning Earth that zooms into the arena.
 
@@ -150,7 +150,7 @@ Old road game pieces (road_slab and variants) are optional decoration only.
 2. Graybox arena + arcade car controller + chase camera. Driving must feel fun.
    Then a **WebGL test build**.
 3. Odometer number, locking, hints, chests, getting blasters.
-4. Combat: Squad Busters-style auto-fire, Turbo, health + blaster bar, demotion,
+4. Combat: Squad Busters-style auto-fire, Turbo, health,
    ramming, elimination, win/lose, restart.
 5. AI opponents with personalities.
 6. Storm, black cats, dice, clovers; tune match length.

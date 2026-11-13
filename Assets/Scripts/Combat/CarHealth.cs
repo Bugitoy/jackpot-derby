@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Car health (100). Damage hits the blaster bar first (CarLoadout), the rest comes off health.
-/// Health 0 = eliminated.
+/// Car health (100). All damage comes straight off health; health 0 = destroyed (whatever blaster it had).
 /// </summary>
 public class CarHealth : MonoBehaviour
 {
@@ -42,8 +41,8 @@ public class CarHealth : MonoBehaviour
         if (!IsAlive || amount <= 0f) return;
         if (attacker == Identity) attacker = null;
 
-        float toBlaster = loadout != null ? loadout.AbsorbDamage(amount) : 0f;
-        float toHealth = Mathf.Min(Health, amount - toBlaster);
+        float toBlaster = 0f;
+        float toHealth = Mathf.Min(Health, amount);
         Health -= toHealth;
         if (attacker != null) LastAttacker = attacker;
 

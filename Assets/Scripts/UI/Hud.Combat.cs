@@ -257,19 +257,13 @@ public partial class Hud
         mm.ResultsShown += ShowResults;
     }
 
-    void OnPlayerBusted(BlasterTier newTier)
-    {
-        ShowPopup("BUSTED!", HpRed, newTier == BlasterTier.Small ? "demoted to the small blaster" : "blaster lost - find a chest!");
-        CameraShake.Add(0.35f);
-    }
-
     void OnAnyDamaged(DamageInfo d)
     {
         if (d.victim != null && worldBars.TryGetValue(d.victim, out var bar)) { bar.sinceHit = 0f; bar.pop = 1f; }
         if (d.amount < 0.5f) return;
         bool victimIsPlayer = d.victim != null && d.victim.Identity != null && d.victim.Identity.isPlayer;
         bool attackerIsPlayer = d.attacker != null && d.attacker.isPlayer;
-        Color c = victimIsPlayer ? HpRed : d.toBlaster > 0f && d.toHealth <= 0f ? TealBar : Color.white;
+        Color c = victimIsPlayer ? HpRed : Color.white;
         if (d.kind == DamageKind.Ram || d.kind == DamageKind.Blast) c = victimIsPlayer ? HpRed : GoldBar;
         float size = d.kind == DamageKind.Ram || d.kind == DamageKind.Blast ? 40f : 30f;
         SpawnDamageNumber(d.point + Vector3.up * 1.5f, Mathf.CeilToInt(d.amount).ToString(), c, size);
@@ -358,16 +352,14 @@ public partial class Hud
         hpFillImg.color = HpColor(hp);
         hpText.text = Mathf.CeilToInt(pHealth.Health).ToString();
 
+        // Which blaster you carry (no separate bar: it's yours until the car is destroyed).
         bool armed = loadout != null && loadout.IsArmed;
-        blasterRow.SetActive(armed);
-        if (armed)
-        {
-            bool jackpot = loadout.Tier == BlasterTier.Jackpot;
-            blasterText.text = jackpot ? "JACKPOT" : "SMALL";
-            blasterText.color = jackpot ? GoldBar : TealBar;
-            blasterFillImg.color = jackpot ? GoldBar : TealBar;
-            SetFill(blasterFill, loadout.BlasterBar / Mathf.Max(1f, loadout.BlasterBarMax));
-        }
+        bool jackpot = armed && loadout.Tier == BlasterTier.Jackpot;
+        blasterFill.parent.gameObject.SetActive(false);
+        blasterText.rectTransform.sizeDelta = new Vector2(260f, 22f);
+        blasterText.rectTransform.anchoredPosition = new Vector2(132f, 0f);
+        blasterText.text = !armed ? "NO BLASTER - find a chest!" : jackpot ? "JACKPOT CANNON" : "SMALL BLASTER";
+        blasterText.color = !armed ? new Color(0.75f, 0.75f, 0.75f) : jackpot ? GoldBar : TealBar;
     }
 
     void UpdateAbilities()
@@ -421,20 +413,9 @@ public partial class Hud
             b.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y);
             b.group.alpha = alpha;
 
-            // Only the outermost layer the car still has.
-            BlasterTier layer = b.loadout != null ? b.loadout.Tier : BlasterTier.None;
-            if (layer != b.shownLayer) { b.shownLayer = layer; b.pop = 1.6f; }   // a layer just got shot away
-            if (layer == BlasterTier.None)
-            {
-                float hp = b.health.Health / b.health.MaxHealth;
-                SetFill(b.fill, hp);
-                b.fillImg.color = HpColor(hp);
-            }
-            else
-            {
-                SetFill(b.fill, b.loadout.BlasterBar / Mathf.Max(1f, b.loadout.BlasterBarMax));
-                b.fillImg.color = layer == BlasterTier.Jackpot ? GoldBar : TealBar;
-            }
+            float hp = b.health.Health / b.health.MaxHealth;
+            SetFill(b.fill, hp);
+            b.fillImg.color = HpColor(hp);
 
             b.pop = Mathf.Max(0f, b.pop - dt * 6f);
             b.root.localScale = Vector3.one * (1f + 0.12f * b.pop);

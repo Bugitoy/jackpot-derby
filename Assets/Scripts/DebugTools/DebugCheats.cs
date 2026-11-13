@@ -40,12 +40,12 @@ public class DebugCheats : MonoBehaviour
         // Combat testing.
         if (k.f6Key.wasPressedThisFrame)
             foreach (var h in CarHealth.Alive)
-                if (h.Identity != null && !h.Identity.isPlayer) h.GetComponent<CarLoadout>().SetTier(BlasterTier.Small, 50f);
+                if (h.Identity != null && !h.Identity.isPlayer) h.GetComponent<CarLoadout>().SetTier(BlasterTier.Small);
         if (player != null)
         {
             var ph = player.GetComponent<CarHealth>();
             if (k.f7Key.wasPressedThisFrame && ph != null) ph.TakeDamage(20f, null, DamageKind.Other, player.transform.position + Vector3.up * 2f);
-            if (k.f8Key.wasPressedThisFrame) player.GetComponent<CarLoadout>().SetTier(BlasterTier.Jackpot, 80f);
+            if (k.f8Key.wasPressedThisFrame) player.GetComponent<CarLoadout>().SetTier(BlasterTier.Jackpot);
             if (k.f9Key.wasPressedThisFrame)
             {
                 CarHealth nearest = null;

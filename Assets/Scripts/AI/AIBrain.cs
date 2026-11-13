@@ -156,7 +156,7 @@ public class AIBrain : MonoBehaviour
     bool WantsChest(Chest c)
     {
         if (!loadout.IsArmed || loadout.Tier == BlasterTier.Small) return true;
-        if (loadout.BlasterBar < loadout.BlasterBarMax * 0.5f) return true;
+        if (health.Health < health.MaxHealth * 0.6f) return true;   // on the cannon, a chest = full repair
         if (!wantsChest.TryGetValue(c, out bool wants))
         {
             wants = Random.value < personality.chestGreed;
@@ -207,9 +207,7 @@ public class AIBrain : MonoBehaviour
             if (other == givenUpOn && Time.time < givenUpUntil) continue;   // lost interest in this one for now
             float d = Dist(other.transform.position);
             if (d > radius || !CanSee(other)) continue;
-            var ol = other.GetComponent<CarLoadout>();
-            float toughness = other.Health + (ol != null ? ol.BlasterBar : 0f);
-            float score = toughness + d * 0.5f; // weakest first, nearer breaks ties
+            float score = other.Health + d * 0.5f; // weakest first, nearer breaks ties
             if (score < bestScore) { bestScore = score; best = other; }
         }
         return best;

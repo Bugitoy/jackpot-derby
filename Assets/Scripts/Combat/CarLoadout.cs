@@ -4,16 +4,11 @@ using UnityEngine;
 public enum BlasterTier { None, Small, Jackpot }
 
 /// <summary>
-/// Which blaster the car carries and how full its blaster bar is. Chests call GrantFromChest.
-/// Shows the matching blaster model on the roof.
+/// Which blaster the car carries. A blaster is kept until the car is destroyed (no blaster bar, no
+/// demotion). Chests call GrantFromChest. Shows the matching blaster model on the roof.
 /// </summary>
 public class CarLoadout : MonoBehaviour
 {
-    [SerializeField] float smallBarMax = 50f;
-    [SerializeField] float jackpotBarMax = 80f;
-    [Tooltip("Blaster bar you keep when demoted from Jackpot cannon to small blaster.")]
-    [SerializeField] float demotedSmallBar = 30f;
-
     [Header("Roof visuals")]
     [SerializeField] GameObject smallBlasterVisual;
     [SerializeField] GameObject jackpotBlasterVisual;
@@ -22,8 +17,6 @@ public class CarLoadout : MonoBehaviour
     [SerializeField] GameObject[] roofCargo;
 
     public BlasterTier Tier { get; private set; }
-    public float BlasterBar { get; private set; }
-    public float BlasterBarMax => Tier == BlasterTier.Jackpot ? jackpotBarMax : Tier == BlasterTier.Small ? smallBarMax : 0f;
     public Transform Mount => mount;
     public bool IsArmed => Tier != BlasterTier.None;
 
@@ -33,75 +26,51 @@ public class CarLoadout : MonoBehaviour
 
     static readonly Color Teal = new Color(0.30f, 0.95f, 0.80f);
     static readonly Color Gold = new Color(1f, 0.82f, 0.15f);
+    static readonly Color Green = new Color(0.35f, 0.95f, 0.40f);
 
     void Awake() => RefreshVisuals();
 
     /// <summary>
-    /// Opening a chest always moves you up exactly one step: no blaster → small blaster → Jackpot cannon
-    /// (the cannon is only ever an upgrade of the small blaster). Already on the cannon: refill its bar.
+    /// Opening a chest moves you up exactly one step: no blaster → small blaster → Jackpot cannon
+    /// (the cannon is only ever an upgrade of the small blaster). Already on the cannon: full repair.
     /// Bonus: an exact number (LUCKY!) or a Jackpot chest also fully repairs the car.
     /// </summary>
     public void GrantFromChest(bool exact, bool jackpotChest)
     {
-        string msg;
+        var health = GetComponent<CarHealth>();
+        string msg, sub = "";
         Color col;
+        bool repaired = false;
         switch (Tier)
         {
             case BlasterTier.None:
-                SetTier(BlasterTier.Small, smallBarMax);
+                SetTier(BlasterTier.Small);
                 msg = "SMALL BLASTER!"; col = Teal;
                 break;
             case BlasterTier.Small:
-                SetTier(BlasterTier.Jackpot, jackpotBarMax);
+                SetTier(BlasterTier.Jackpot);
                 msg = "UPGRADE! JACKPOT CANNON"; col = Gold;
                 break;
             default:
-                BlasterBar = jackpotBarMax;
-                TierChanged?.Invoke(Tier);
-                msg = "CANNON REFILLED"; col = Gold;
+                if (health != null) health.RepairFull();
+                repaired = true;
+                msg = "FULL REPAIR!"; col = Green;
                 break;
         }
 
-        string sub = "";
-        if (exact || jackpotChest)
+        if ((exact || jackpotChest) && !repaired)
         {
-            var health = GetComponent<CarHealth>();
             if (health != null) health.RepairFull();
             sub = "+ FULL REPAIR";
         }
         RewardMessage?.Invoke(msg, col, sub);
     }
 
-    public void SetTier(BlasterTier tier, float bar)
+    public void SetTier(BlasterTier tier)
     {
         Tier = tier;
-        BlasterBar = Mathf.Clamp(bar, 0f, BlasterBarMax);
         RefreshVisuals();
         TierChanged?.Invoke(tier);
-    }
-
-    /// <summary>Fired when the blaster bar runs out and the car is demoted ("BUSTED").</summary>
-    public event Action<BlasterTier> Busted;
-
-    /// <summary>Soak up damage with the blaster bar. Returns how much it absorbed.</summary>
-    public float AbsorbDamage(float amount)
-    {
-        if (!IsArmed || BlasterBar <= 0f) return 0f;
-        float used = Mathf.Min(amount, BlasterBar);
-        BlasterBar -= used;
-        if (BlasterBar <= 0.01f)
-        {
-            Demote();
-            Busted?.Invoke(Tier);
-        }
-        return used;
-    }
-
-    /// <summary>Blaster bar emptied: Jackpot → small (30 bar), small → none.</summary>
-    public void Demote()
-    {
-        if (Tier == BlasterTier.Jackpot) SetTier(BlasterTier.Small, demotedSmallBar);
-        else SetTier(BlasterTier.None, 0f);
     }
 
     void RefreshVisuals()

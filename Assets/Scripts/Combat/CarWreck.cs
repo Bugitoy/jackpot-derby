@@ -20,7 +20,7 @@ public class CarWreck : MonoBehaviour
         var motor = GetComponent<CarMotor>();
         if (motor != null) { motor.InputEnabled = false; motor.SpeedMultiplier = 1f; }
         var loadout = GetComponent<CarLoadout>();
-        if (loadout != null) loadout.SetTier(BlasterTier.None, 0f);
+        if (loadout != null) loadout.SetTier(BlasterTier.None);
         var odometer = GetComponent<Odometer>();
         if (odometer != null) odometer.enabled = false;
         var rb = GetComponent<Rigidbody>();
