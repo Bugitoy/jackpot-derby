@@ -97,10 +97,13 @@ Use NavMesh (AI Navigation package) with a simple state machine: Wander, SeekChe
 **Follow `Docs/map_reference.png`** (Lefika's overview image): a big, dense, isometric-looking cartoon city
 grid with a garage in each corner and the Bad Luck Storm clouds around the edge.
 - Rectangle about 200 × 140 units, one ground level (no drivable overpasses or tunnels for the jam),
-  walled with arena_wall / retaining_wall segments. Roads dead-ending at the middle of each side end in
-  a tunnel_entrance built into the wall (facing in, blocked). Outside the walls: a ~40-unit band of
-  densely packed buildings on narrow footpaths, fading into fog, so the edge never looks cut off.
-  No grass outside the walls; parks use a soft sage lawn (grass_tuft model gets scattered when added).
+  with no visible wall (Lefika removed them): invisible edge colliders, guardrails where arena roads
+  meet the edge, and road-closed barriers where a street carries on outside. Outside: scenery city on
+  an extended grid (ArenaBuilder.Ext): blocks, ring road, blocks, ring road, tight lots, with gaps
+  narrowing ring by ring and tunnel_entrance models at the ends of the streets; haze beyond.
+  No grass outside; parks use a soft sage lawn (grass_tuft model gets scattered when added).
+- Model textures: keep SceneryKit's high-quality compression (BC7-class). Fully uncompressed (~2 GB)
+  doesn't fit a WebGL build. Normal maps must stay plain linear textures (not "Normal map" import).
 - Road lanes only connect to road/roundabout/garage tiles; plazas and parks sit beside roads.
 - Streets: a grid of 2-lane roads with intersections, T-junctions and a few curves, plus a central
   roundabout. Build road surfaces, sidewalks and curbs in Unity (planes/ProBuilder) using the textures in
