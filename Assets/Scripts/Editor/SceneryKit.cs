@@ -107,6 +107,7 @@ public static class SceneryKit
         new Spec("vending_machine", 1.2f),
         new Spec("slot_machine",    1.4f),
         new Spec("coin",            1.0f, Col.None),
+        new Spec("wheel",           0.98f, Col.None), // Lefika's car wheel (replaces the Tripo cars' gappy wheels)
         new Spec("road_slab_lucky", 6.0f, Col.None),
     };
 
@@ -162,6 +163,26 @@ public static class SceneryKit
         EditorUtility.ClearProgressBar();
         AssetDatabase.SaveAssets();
         Debug.Log($"[SceneryKit] Built {specs.Count} scenery prefabs ({written.Count} textures).");
+    }
+
+    /// <summary>Build (or rebuild) just one scenery prefab, e.g. after adding a single new model.</summary>
+    public static GameObject BuildOne(string name)
+    {
+        foreach (var f in new[] { PrefabFolder, MeshFolder, TexFolder, MatFolder }) ModelPrefabUtil.EnsureFolder(f);
+        foreach (var s in AllSpecs())
+        {
+            if (s.name != name) continue;
+            var model = LoadModel(s.name);
+            if (model == null) return null;
+            var mats = SourceMaterials(model);
+            for (int i = 0; i < mats.Count; i++)
+                WriteMaterialTextures(mats[i], $"{TexFolder}/{SlotName(s.name, i)}", s.glow, true);
+            Build(s);
+            AssetDatabase.SaveAssets();
+            return Get(name);
+        }
+        Debug.LogWarning("[SceneryKit] No spec named " + name);
+        return null;
     }
 
     static GameObject LoadModel(string name) => AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Models/{name}.glb");

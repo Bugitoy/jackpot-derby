@@ -108,8 +108,12 @@ public static class CombatAssetBuilder
         return m;
     }
 
+    /// <summary>Material for coin particles: the coin model's own material if it has been built.</summary>
     public static Material CoinMaterial()
     {
+        var coin = SceneryKit.Get("coin");
+        if (coin != null && coin.GetComponent<MeshRenderer>().sharedMaterial != null)
+            return coin.GetComponent<MeshRenderer>().sharedMaterial;
         ModelPrefabUtil.EnsureFolder("Assets/Materials/FX");
         const string path = "Assets/Materials/FX/FxCoin.mat";
         var m = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -134,8 +138,33 @@ public static class CombatAssetBuilder
         return m;
     }
 
-    /// <summary>A flat disc (squashed built-in cylinder) for coin particles, saved as an asset.</summary>
+    /// <summary>
+    /// Mesh for coin particles: the coin model (Assets/Models/coin.glb, via its scenery prefab),
+    /// re-centred so the coins tumble about their middle. Falls back to a plain disc.
+    /// </summary>
     public static Mesh CoinMesh()
+    {
+        var coin = SceneryKit.Get("coin");
+        var src = coin != null ? coin.GetComponent<MeshFilter>().sharedMesh : null;
+        if (src != null)
+        {
+            const string modelPath = "Assets/Materials/FX/CoinModel.asset";
+            var m = Object.Instantiate(src);
+            var v = m.vertices;
+            Vector3 c = src.bounds.center;
+            for (int i = 0; i < v.Length; i++) v[i] -= c;
+            m.vertices = v;
+            m.RecalculateBounds();
+            m.name = "CoinModel";
+            var old = AssetDatabase.LoadAssetAtPath<Mesh>(modelPath);
+            if (old != null) { EditorUtility.CopySerialized(m, old); Object.DestroyImmediate(m); return old; }
+            AssetDatabase.CreateAsset(m, modelPath);
+            return m;
+        }
+        return CoinDisc();
+    }
+
+    static Mesh CoinDisc()
     {
         const string path = "Assets/Materials/FX/CoinDisc.asset";
         var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);

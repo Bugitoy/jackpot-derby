@@ -6,7 +6,7 @@ using UnityEngine;
 /// scripts use it to find open ground (chest spawns) and roads.
 ///
 /// Legend:  R road   P plaza/parking (open, drivable)   K park (grass + trees)
-///          . city block (sidewalk + buildings)   X roundabout island   G garage
+///          . city block (sidewalk + buildings)   X centre island   G garage
 /// A road that dead-ends at the edge (middle of each side) ends in a tunnel built into the wall.
 /// </summary>
 public class ArenaGrid : MonoBehaviour

@@ -152,6 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WheelSpinner
   model: {fileID: 2601409473997760414}
+  wheelPrefab: {fileID: 7896127483338873227, guid: eec1c8049ad31dd4bb89fd0c1f9ffebe, type: 3}
   maxSteerAngle: 24
   steerSmoothing: 10
 --- !u!114 &8376209534341409407
@@ -420,7 +421,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2568493645953430920}
+  - {fileID: 2380941412875906054}
   m_Father: {fileID: 6484141795201136110}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7183222310254134826
@@ -575,10 +576,10 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1180315893446676211}
+  - {fileID: 6643910354546105162}
   m_Father: {fileID: 6484141795201136110}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &1882152393548792726
+--- !u!1001 &1779323605549210136
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -803,10 +804,10 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: -4161369568681901532, guid: 27f22c5401f6b9b429433787131c1298, type: 3}
---- !u!4 &2568493645953430920 stripped
+--- !u!4 &2380941412875906054 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4160095693325104670, guid: 27f22c5401f6b9b429433787131c1298, type: 3}
-  m_PrefabInstance: {fileID: 1882152393548792726}
+  m_PrefabInstance: {fileID: 1779323605549210136}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2135182173609562496
 PrefabInstance:
@@ -1172,7 +1173,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 7570972833441913174, guid: 373bd99c4f9de7e4d9fb4520f5aacc59, type: 3}
   m_PrefabInstance: {fileID: 2135182173609562496}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &3015991116352026861
+--- !u!1001 &7316178656970468692
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -1365,8 +1366,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: -4161369568681901532, guid: f9a3437229e339641b8a2ad9f8eaff46, type: 3}
---- !u!4 &1180315893446676211 stripped
+--- !u!4 &6643910354546105162 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4160095693325104670, guid: f9a3437229e339641b8a2ad9f8eaff46, type: 3}
-  m_PrefabInstance: {fileID: 3015991116352026861}
+  m_PrefabInstance: {fileID: 7316178656970468692}
   m_PrefabAsset: {fileID: 0}

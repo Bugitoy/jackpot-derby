@@ -145,7 +145,7 @@ public class FxLibrary : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Vector3 v = new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)).normalized * Random.Range(3f, 9f) + Vector3.up * Random.Range(8f, 15f);
-            Emit(coins, pos + Vector3.up * 1.5f, v, Random.Range(0.6f, 0.9f), Random.Range(1.6f, 2.4f), gold);
+            Emit(coins, pos + Vector3.up * 1.5f, v, Random.Range(0.45f, 0.68f), Random.Range(1.6f, 2.4f), gold);
         }
     }
 

@@ -7,7 +7,8 @@ using UnityEngine.Rendering;
 /// <summary>
 /// Builds the arena from the ArenaGrid text layout using the real models (light prefabs made by
 /// SceneryKit): textured roads that line up, sidewalks, buildings facing their street with rooftop
-/// dressing, street props and parked cars for cover, parks, plazas, the central roundabout with a
+/// dressing, street props and parked cars for cover, parks, plazas, the central island (looped by
+/// ordinary road tiles) with a
 /// giant slot machine, the four corner garages, and the walled edge with a ring of city outside.
 /// Re-running it wipes and rebuilds everything under the Arena object.
 /// </summary>
@@ -36,6 +37,11 @@ public static class ArenaBuilder
     static Dictionary<string, Material> mats;
     static System.Random rand;
     static ArenaGrid arena;
+    /// <summary>Street lamps placed so far (so two never end up side by side).</summary>
+    static List<Vector3> lampSpots;
+    /// <summary>Which building model went on which tile (inner and outer grid), for variety.</summary>
+    static Dictionary<Vector2Int, string> buildingAt;
+    const float LampSpacing = 6f;
     /// <summary>Outer tiles behind each garage (the garage model pokes out past the edge into them).</summary>
     static HashSet<Vector2Int> yards;
 
@@ -49,6 +55,8 @@ public static class ArenaBuilder
         EditorUtility.SetDirty(grid);
         grid.Parse(true);
         arena = grid;
+        lampSpots = new List<Vector3>();
+        buildingAt = new Dictionary<Vector2Int, string>();
         // The tile just outside each garage's back wall: the garage model stands there.
         yards = new HashSet<Vector2Int>();
         foreach (var gy in new[] { new Vector2Int(0, 0), new Vector2Int(grid.Width - 1, 0), new Vector2Int(0, grid.Height - 1), new Vector2Int(grid.Width - 1, grid.Height - 1) })
@@ -74,7 +82,11 @@ public static class ArenaBuilder
         // Ground slab under everything (its collider is what cars drive on).
         // City paving, not grass: everything past the walls is pavement under the outer city and haze.
         float outerSpan = (OuterRings + 2) * t * 2f;
-        var g = Box(ground, "GroundSlab", new Vector3(0, -0.5f, 0), new Vector3(w * t + outerSpan, 1, h * t + outerSpan), TexMat("GroundPaving", "tex_sidewalk", new Color(0.74f, 0.73f, 0.70f), 40f));
+        // Same sidewalk look as everywhere else, tiled at the same scale (one repeat per 6 units).
+        Vector3 slabSize = new Vector3(w * t + outerSpan, 1, h * t + outerSpan);
+        var groundMat = TexMat("GroundSidewalk", "tex_sidewalk", Color.white, 1f);
+        groundMat.SetTextureScale("_BaseMap", new Vector2(slabSize.x / 6f, slabSize.z / 6f));
+        var g = Box(ground, "GroundSlab", new Vector3(0, -0.5f, 0), slabSize, groundMat);
         g.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
 
         var garageDefs = new[]
@@ -94,14 +106,6 @@ public static class ArenaBuilder
             { new Vector2Int(10, 6), "store_pawn" },
         };
 
-        var roundabout = new HashSet<Vector2Int>();
-        for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++)
-            if (grid.Get(x, y) == 'X')
-                for (int dy = -1; dy <= 1; dy++)
-                for (int dx = -1; dx <= 1; dx++)
-                    roundabout.Add(new Vector2Int(x + dx, y + dy));
-
         for (int y = 0; y < h; y++)
         for (int x = 0; x < w; x++)
         {
@@ -109,8 +113,9 @@ public static class ArenaBuilder
             Vector3 p = grid.TileCenter(x, y);
             string id = $"{x}_{y}";
             var key = new Vector2Int(x, y);
-            if (c == 'X') { BuildRoundabout(roads, p, t); continue; }
-            if (roundabout.Contains(key) && c == 'R') { Flat(roads, $"Asphalt_{id}", p + Vector3.up * 0.02f, t, t, 0f, Mat("Asphalt", new Color(0.16f, 0.21f, 0.21f))); continue; }
+            // The centre: an island the 8 road tiles around it loop round (their own road textures
+            // make the loop, so every lane lines up with the streets).
+            if (c == 'X') { BuildCentreIsland(roads, p, t); continue; }
             switch (c)
             {
                 case 'R': BuildRoad(roads, props, grid, x, y, p, t, id); break;
@@ -142,7 +147,7 @@ public static class ArenaBuilder
 
     // Only real road continues a road's painted lanes. Plazas and parks sit beside the road (its edge
     // line runs past them) instead of a lane running into their pavement and stopping dead.
-    static bool Connects(char c) => c == 'R' || c == 'X' || c == 'G' || c == 'O';
+    static bool Connects(char c) => c == 'R' || c == 'G' || c == 'O';
 
     /// <summary>Lay one road tile with the texture that matches its arms. Returns the texture used.</summary>
     static string RoadSurface(Transform parent, string id, Vector3 p, float t, bool n, bool e, bool s, bool wv, out float yaw)
@@ -192,24 +197,30 @@ public static class ArenaBuilder
         }
     }
 
-    static void BuildRoundabout(Transform parent, Vector3 p, float t)
+    /// <summary>
+    /// The centre tile: a raised island (sidewalk curb round a lawn) with the giant slot machine.
+    /// Cars drive round it on the ring of road tiles; a box collider keeps them off the lawn.
+    /// </summary>
+    static void BuildCentreIsland(Transform parent, Vector3 p, float t)
     {
-        float size = t * 3f;
-        Flat(parent, "Roundabout_Road", p + Vector3.up * 0.03f, size, size, 0f, TexMat("tex_roundabout", "tex_roundabout", Color.white, 1f));
-        // Invisible island collider (the texture draws the grass), with a low curb ring for feel.
-        float islandR = size * 0.205f;
-        var island = Cylinder(parent, "Roundabout_Island", p + Vector3.up * 1f, new Vector3(islandR * 2f, 1f, islandR * 2f), Mat("Grass", new Color(0.36f, 0.62f, 0.30f)));
-        island.GetComponent<Renderer>().enabled = false;
-        Object.DestroyImmediate(island.GetComponent<Collider>());
-        island.AddComponent<MeshCollider>().convex = true;
+        var curb = Box(parent, "CentreIsland_Curb", p + Vector3.up * 0.1f, new Vector3(t * 0.92f, 0.2f, t * 0.92f), SidewalkMat(), false);
+        curb.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+        var lawn = Box(parent, "CentreIsland_Lawn", p + Vector3.up * 0.13f, new Vector3(t * 0.8f, 0.22f, t * 0.8f), TexMat("ParkLawn", "tex_grass", new Color(0.62f, 0.78f, 0.62f), 1.5f), false);
+        lawn.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+        var block = new GameObject("CentreIsland_Collider");
+        block.transform.SetParent(parent, false);
+        block.transform.position = p + Vector3.up * 1.5f;
+        block.AddComponent<BoxCollider>().size = new Vector3(t * 0.92f, 3f, t * 0.92f);
+
         // Landmark: a giant slot machine (stand-in for lucky_tower).
         var slot = Place(parent, "slot_machine", p, 180f);
-        if (slot != null) slot.transform.localScale = Vector3.one * 8f;
-        ScatterGrass(parent, p, islandR * 0.6f, 10);
-        for (int i = 0; i < 6; i++)
+        if (slot != null) slot.transform.localScale = Vector3.one * 6.5f;
+        ScatterGrass(parent, p, t * 0.36f, 10);
+        float r = t * 0.36f;
+        for (int i = 0; i < 4; i++)
         {
-            float a = i * Mathf.PI / 3f + 0.4f;
-            Place(parent, i % 2 == 0 ? "bush_large" : "potted_plants", p + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * islandR * 0.75f, i * 60f);
+            Vector3 corner = new Vector3(i % 2 == 0 ? -r : r, 0.24f, i < 2 ? -r : r);
+            Place(parent, i % 2 == 0 ? "bush_large" : "potted_plants", p + corner, i * 90f);
         }
     }
 
@@ -217,7 +228,7 @@ public static class ArenaBuilder
 
     static void BuildPlaza(Transform parent, Vector3 p, float t, string id)
     {
-        Flat(parent, $"Plaza_{id}", p + Vector3.up * 0.02f, t, t, 0f, TexMat("Plaza", "tex_sidewalk", new Color(0.85f, 0.85f, 0.82f), 3f));
+        Flat(parent, $"Plaza_{id}", p + Vector3.up * 0.02f, t, t, 0f, SidewalkMat());
         // A little cover at the edges; the middle stays open for chests and dogfights.
         int n = rand.Next(1, 3);
         for (int i = 0; i < n; i++)
@@ -268,7 +279,7 @@ public static class ArenaBuilder
 
     static void BuildBlock(Transform parent, Transform props, ArenaGrid grid, int x, int y, Vector3 p, float t, string id, string landmark)
     {
-        var slab = Box(parent, $"Sidewalk_{id}", p + Vector3.up * 0.06f, new Vector3(t, 0.12f, t), TexMat("Sidewalk", "tex_sidewalk", Color.white, 2f), false);
+        var slab = Box(parent, $"Sidewalk_{id}", p + Vector3.up * 0.06f, new Vector3(t, 0.12f, t), SidewalkMat(), false);
         slab.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
         slab.isStatic = true;
 
@@ -280,7 +291,8 @@ public static class ArenaBuilder
             if (ArenaGrid.IsDrivable(grid.Get(x + d.dx, y + d.dy))) { face = d.yaw; break; }
 
         bool edge = x == 0 || y == 0 || x == grid.Width - 1 || y == grid.Height - 1;
-        string model = landmark ?? Pick(BuildingPool);
+        string model = landmark ?? PickBuilding(new Vector2Int(x, y), BuildingPool);
+        if (landmark != null) buildingAt[new Vector2Int(x, y)] = landmark;
         var b = Place(parent, model, p, face);
         if (b != null)
         {
@@ -299,7 +311,7 @@ public static class ArenaBuilder
             if (!ArenaGrid.IsDrivable(grid.Get(x + d.dx, y + d.dy))) continue;
             Vector3 edgeCentre = p + d.v * (t * 0.5f - 0.45f);
             Vector3 side = new Vector3(d.v.z, 0, d.v.x);
-            if (rand.NextDouble() < 0.6) Place(props, "street_lamp", edgeCentre + side * t * 0.4f * (rand.Next(2) == 0 ? 1 : -1), d.yaw);
+            if (rand.NextDouble() < 0.6) PlaceLamp(props, edgeCentre + side * t * 0.4f * (rand.Next(2) == 0 ? 1 : -1), d.yaw);
             if (rand.NextDouble() < 0.5) Place(props, Pick(SidewalkPool), edgeCentre + d.v * 0.9f + side * (float)(rand.NextDouble() - 0.5) * t * 0.5f, d.yaw);
         }
     }
@@ -436,7 +448,19 @@ public static class ArenaBuilder
 
     /// <summary>How many tile rings of scenery city surround the arena.</summary>
     const int OuterRings = 5;
-    static readonly string[] TallPool = { "apartment_brick", "apartment_cream", "apartment_cream_2", "apartment_teal", "house_tall", "store_grocer", "store_pawn" };
+    // Outer city: every building type (plus a few landmarks) so neighbours can always differ; the
+    // tight edge ring leans toward taller apartments but still mixes in shops and houses.
+    static readonly string[] OuterPool =
+    {
+        "apartment_brick", "apartment_cream", "apartment_cream_2", "apartment_teal",
+        "store_cafe", "store_grocer", "store_laundromat", "store_mechanic", "store_pawn",
+        "house_small", "house_small_yellow", "house_tall", "garage_small", "arcade_building", "charm_shop",
+    };
+    static readonly string[] EdgePool =
+    {
+        "apartment_brick", "apartment_cream", "apartment_cream_2", "apartment_teal", "house_tall",
+        "store_grocer", "store_pawn", "store_cafe", "store_laundromat", "house_small", "arcade_building",
+    };
 
     /// <summary>
     /// The tile at (x, y) on a grid that extends past the arena. Inside: the arena layout. Outside, in
@@ -484,7 +508,7 @@ public static class ArenaBuilder
         int w = arena.Width, h = arena.Height;
         var roads = Group(parent, "OuterRoads");
         var lots = Group(parent, "OuterLots");
-        var walkway = TexMat("OuterSidewalk", "tex_sidewalk", new Color(0.92f, 0.91f, 0.88f), 2f);
+        var walkway = SidewalkMat();
         for (int y = -OuterRings; y < h + OuterRings; y++)
         for (int x = -OuterRings; x < w + OuterRings; x++)
         {
@@ -524,7 +548,7 @@ public static class ArenaBuilder
             float tall = ring == 1 ? 0.9f + (float)rand.NextDouble() * 0.2f
                        : ring == 3 ? 1.0f + (float)rand.NextDouble() * 0.25f
                        : 1.15f + (float)rand.NextDouble() * 0.3f;
-            string model = ring >= 5 ? Pick(TallPool) : Pick(BuildingPool);
+            string model = PickBuilding(new Vector2Int(x, y), ring >= 5 ? EdgePool : OuterPool);
             var b = Place(lots, model, p, faceYaw, true);
             if (b == null) continue;
             Vector3 ms = b.GetComponent<MeshFilter>().sharedMesh.bounds.size;
@@ -538,7 +562,7 @@ public static class ArenaBuilder
             if (ring <= 3 && Connects(Ext(x + (int)inward.x, y - (int)inward.z)) && rand.NextDouble() < 0.45)
             {
                 Vector3 side = new Vector3(inward.z, 0f, -inward.x);
-                Place(lots, "street_lamp", p + inward * (t * 0.5f - 0.45f) + side * t * 0.38f * (rand.Next(2) == 0 ? 1 : -1), faceYaw, false);
+                PlaceLamp(lots, p + inward * (t * 0.5f - 0.45f) + side * t * 0.38f * (rand.Next(2) == 0 ? 1 : -1), faceYaw, false);
             }
         }
         SetStaticRecursive(roads.gameObject);
@@ -567,6 +591,39 @@ public static class ArenaBuilder
     // ---------- helpers ----------
 
     static string Pick(string[] pool) => pool[rand.Next(pool.Length)];
+
+    /// <summary>
+    /// A building for a tile that differs from every building on the 8 tiles around it (falls back to
+    /// the 4 side neighbours, then anything, if the pool is too small). Remembers the choice.
+    /// </summary>
+    static string PickBuilding(Vector2Int tile, string[] pool)
+    {
+        string pick = null;
+        for (int pass = 0; pass < 3 && pick == null; pass++)
+        {
+            var near = new HashSet<string>();
+            if (pass < 2)
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if ((dx == 0 && dy == 0) || (pass == 1 && dx != 0 && dy != 0)) continue;
+                    if (buildingAt.TryGetValue(new Vector2Int(tile.x + dx, tile.y + dy), out var m)) near.Add(m);
+                }
+            var options = new List<string>();
+            foreach (var m in pool) if (!near.Contains(m)) options.Add(m);
+            if (options.Count > 0) pick = options[rand.Next(options.Count)];
+        }
+        buildingAt[tile] = pick;
+        return pick;
+    }
+
+    /// <summary>A street lamp, unless another one already stands within a few metres.</summary>
+    static void PlaceLamp(Transform parent, Vector3 pos, float yaw, bool keepCollider = true)
+    {
+        foreach (var l in lampSpots)
+            if ((l - pos).sqrMagnitude < LampSpacing * LampSpacing) return;
+        if (Place(parent, "street_lamp", pos, yaw, keepCollider) != null) lampSpots.Add(pos);
+    }
 
     /// <summary>Instantiate a scenery prefab at a world position, turned so its front faces yaw.</summary>
     static GameObject Place(Transform parent, string name, Vector3 pos, float yaw, bool keepCollider = true)
@@ -620,6 +677,9 @@ public static class ArenaBuilder
     }
 
     static Material Mat(string name, Color c) => TexMat(name, null, c, 1f);
+
+    /// <summary>The one sidewalk look used for every paved surface (blocks, plazas, outer lots).</summary>
+    static Material SidewalkMat() => TexMat("Sidewalk", "tex_sidewalk", Color.white, 2f);
 
     static Material TexMat(string name, string texName, Color c, float tiling)
     {

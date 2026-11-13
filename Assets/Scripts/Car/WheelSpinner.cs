@@ -5,12 +5,17 @@ using UnityEngine;
 /// Spins the car model's wheels with its speed, and turns the front pair with the steering.
 /// The Tripo car models have each wheel (tyre and rim) as separate parts, so at start-up this finds
 /// them by shape: thin, round parts low down at the sides of the body. Each wheel's parts go under a
-/// pivot at the wheel's centre, which is then rotated.
+/// pivot at the wheel's centre, which is then rotated. The Tripo wheels aren't fully modelled (gaps
+/// show when they spin), so they are hidden and Lefika's wheel model is fitted in their place.
+/// Runs before CarFx so the fitted wheels are included in its hit flashes.
 /// </summary>
+[DefaultExecutionOrder(-100)]
 public class WheelSpinner : MonoBehaviour
 {
     [Tooltip("Where to look for wheel parts (the car's model).")]
     [SerializeField] Transform model;
+    [Tooltip("Wheel model fitted in place of the car model's own wheels (axle along its Z). Empty = keep the originals.")]
+    [SerializeField] GameObject wheelPrefab;
     [Tooltip("Front wheel turn at full steering, degrees.")]
     [SerializeField] float maxSteerAngle = 24f;
     [SerializeField] float steerSmoothing = 10f;
@@ -72,18 +77,44 @@ public class WheelSpinner : MonoBehaviour
             home.Add(c);
         }
 
-        Transform holder = model.parent != null ? model.parent : model;
         foreach (var g in groups)
         {
             Bounds wb = g[0].b;
             foreach (var p in g) wb.Encapsulate(p.b);
+            // Pivots live under the model so CarFx (which collects the model's renderers) flashes them.
             var pivot = new GameObject("WheelPivot").transform;
-            pivot.SetParent(holder, false);
+            pivot.SetParent(model, false);
             pivot.position = transform.TransformPoint(wb.center);
             pivot.rotation = transform.rotation;
-            foreach (var p in g) p.r.transform.SetParent(pivot, true);
+            bool right = wb.center.x > car.center.x;
+            if (wheelPrefab != null && FitWheel(pivot, Mathf.Max(wb.size.y, wb.size.z), right))
+                foreach (var p in g) p.r.gameObject.SetActive(false);
+            else
+                foreach (var p in g) p.r.transform.SetParent(pivot, true);
             wheels.Add(new Wheel { pivot = pivot, rest = pivot.localRotation, radius = Mathf.Max(0.1f, Mathf.Max(wb.size.y, wb.size.z) * 0.5f), front = wb.center.z > car.center.z });
         }
+    }
+
+    /// <summary>
+    /// Put a copy of the wheel model on a pivot, centred, sized to the original wheel's diameter,
+    /// with its axle along the car's X and its outer face pointing away from the car.
+    /// </summary>
+    bool FitWheel(Transform pivot, float diameter, bool rightSide)
+    {
+        var mf = wheelPrefab.GetComponentInChildren<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) return false;
+        Bounds mb = mf.sharedMesh.bounds;
+        float meshDiameter = Mathf.Max(mb.size.x, mb.size.y);
+        if (meshDiameter <= 0f) return false;
+
+        var w = Instantiate(wheelPrefab, pivot);
+        w.name = "Wheel";
+        foreach (var c in w.GetComponentsInChildren<Collider>()) Destroy(c);
+        w.transform.localRotation = Quaternion.Euler(0f, rightSide ? 90f : -90f, 0f);
+        float k = diameter / meshDiameter / Mathf.Max(1e-4f, pivot.lossyScale.x);
+        w.transform.localScale = Vector3.one * k;
+        w.transform.localPosition = -(w.transform.localRotation * (mb.center * k));
+        return true;
     }
 
     /// <summary>A mesh's bounds in this car's local space.</summary>
