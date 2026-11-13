@@ -15,9 +15,9 @@ RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
   m_Fog: 1
-  m_FogColor: {r: 0.66, g: 0.76, b: 0.84, a: 1}
-  m_FogMode: 1
-  m_FogDensity: 0.01
+  m_FogColor: {r: 0.76, g: 0.85, b: 0.93, a: 1}
+  m_FogMode: 3
+  m_FogDensity: 0.0052
   m_LinearFogStart: 55
   m_LinearFogEnd: 165
   m_AmbientSkyColor: {r: 0.78, g: 0.84, b: 0.92, a: 1}
@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 29abdef373847b64b86f194fa813dbc0, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionBounces: 1
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
-  m_Sun: {fileID: 0}
+  m_Sun: {fileID: 1802225929}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -8583,8 +8583,8 @@ Camera:
   m_GameObject: {fileID: 181401332}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.66, g: 0.76, b: 0.84, a: 1}
+  m_ClearFlags: 1
+  m_BackGroundColor: {r: 0.76, g: 0.85, b: 0.93, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -12810,7 +12810,7 @@ ReflectionProbe:
   m_NearClip: 0.3
   m_FarClip: 1000
   m_ShadowDistance: 100
-  m_ClearFlags: 2
+  m_ClearFlags: 1
   m_BackGroundColor: {r: 0.66, g: 0.76, b: 0.84, a: 1}
   m_CullingMask:
     serializedVersion: 2
@@ -91702,7 +91702,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1802225927}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.41193414, y: -0.30740568, z: 0.14993176, w: 0.8445902}
+  m_LocalRotation: {x: 0.36716715, y: -0.31483123, z: 0.1336379, w: 0.86499166}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

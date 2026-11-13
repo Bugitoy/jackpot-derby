@@ -19,7 +19,7 @@ public static class LookSetup
         var light = Object.FindAnyObjectByType<Light>();
         if (light == null) light = new GameObject("Directional Light").AddComponent<Light>();
         light.type = LightType.Directional;
-        light.transform.rotation = Quaternion.Euler(52f, -40f, 0f);
+        light.transform.rotation = Quaternion.Euler(SunElevation, SunAzimuth, 0f);
         light.intensity = 1.55f;
         light.color = new Color(1f, 0.93f, 0.80f);
         light.shadows = LightShadows.Soft;
@@ -61,13 +61,15 @@ public static class LookSetup
 
         BuildStormVolume();
 
-        // Soft haze: the city fades into the sky colour instead of ending at a hard edge.
-        Color sky = new Color(0.66f, 0.76f, 0.84f);
+        // Sky: atmosphere gradient, sun and drifting clouds. The fog uses the sky's horizon colour and
+        // stays thin, so only far-off buildings fade (aerial perspective), not the whole view.
+        Color horizon = new Color(0.76f, 0.85f, 0.93f);
+        RenderSettings.sun = light;
+        RenderSettings.skybox = SkyMaterial(light, horizon);
         RenderSettings.fog = true;
-        RenderSettings.fogMode = FogMode.Linear;
-        RenderSettings.fogColor = sky;
-        RenderSettings.fogStartDistance = 55f;
-        RenderSettings.fogEndDistance = 165f;
+        RenderSettings.fogMode = FogMode.ExponentialSquared;
+        RenderSettings.fogColor = horizon;
+        RenderSettings.fogDensity = 0.0052f;
 
         var cam = Camera.main;
         if (cam != null)
@@ -77,8 +79,8 @@ public static class LookSetup
             data.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
             // The storm mist softens against the depth buffer.
             data.requiresDepthOption = CameraOverrideOption.On;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = sky;
+            cam.clearFlags = CameraClearFlags.Skybox;
+            cam.backgroundColor = horizon;
         }
 
         // A reflection probe over the arena, rendered once at start, so shiny surfaces reflect the
@@ -94,8 +96,7 @@ public static class LookSetup
         probe.size = new Vector3(400f, 80f, 340f);
         probe.resolution = 128;
         probe.boxProjection = false;
-        probe.clearFlags = ReflectionProbeClearFlags.SolidColor;
-        probe.backgroundColor = sky;
+        probe.clearFlags = ReflectionProbeClearFlags.Skybox;
         probe.intensity = 1f;
 
         // The low chase camera sees detail up close: shorter shadow distance = crisper shadows.
@@ -109,6 +110,29 @@ public static class LookSetup
 
         EditorSceneManager.MarkSceneDirty(volGo.scene);
         AssetDatabase.SaveAssets();
+    }
+
+    const float SunElevation = 46f, SunAzimuth = -40f;
+    /// <summary>
+    /// The sun drawn in the sky sits lower than the light that casts the shadows (same compass
+    /// direction), so the low chase camera actually gets to see it; real-height shadows stay short.
+    /// </summary>
+    const float SkySunElevation = 16f;
+    const string SkyPath = "Assets/Materials/Sky/Sky.mat";
+
+    static Material SkyMaterial(Light light, Color horizon)
+    {
+        ModelPrefabUtil.EnsureFolder("Assets/Materials/Sky");
+        var shader = Shader.Find("JackpotDerby/StylizedSky");
+        var m = AssetDatabase.LoadAssetAtPath<Material>(SkyPath);
+        if (m == null) { m = new Material(shader); AssetDatabase.CreateAsset(m, SkyPath); }
+        m.shader = shader;
+        // Direction toward the sun: opposite a light pointing down at the sky elevation.
+        m.SetVector("_SunDir", -(Quaternion.Euler(SkySunElevation, SunAzimuth, 0f) * Vector3.forward));
+        m.SetColor("_HorizonColor", horizon);
+        m.SetColor("_SunColor", light.color);
+        EditorUtility.SetDirty(m);
+        return m;
     }
 
     const string StormProfilePath = "Assets/Settings/StormVolumeProfile.asset";
