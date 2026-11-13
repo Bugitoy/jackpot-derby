@@ -33,15 +33,21 @@ public partial class Hud
     Image turboFill, blastFill, turboBack, blastBack;
     TextMeshProUGUI turboKey, blastKey, blastIcon;
 
-    // Floating bars over cars
+    // Floating bar over each car: one bar, only while it's being hit, showing its outermost layer
+    // (Jackpot cannon bar -> small blaster bar -> car health).
+    const float BarShowTime = 1.5f;   // fully visible this long after the last hit...
+    const float BarFadeTime = 0.8f;   // ...then fades out over this long
     class WorldBar
     {
-        public RectTransform root, hp, blaster;
-        public Image hpImg, blasterImg;
-        public GameObject blasterRow;
+        public RectTransform root, fill;
+        public Image fillImg;
+        public CanvasGroup group;
         public TextMeshProUGUI label;
         public CarHealth health;
         public CarLoadout loadout;
+        public float sinceHit = 99f;
+        public float pop;
+        public BlasterTier shownLayer;
     }
     readonly Dictionary<CarHealth, WorldBar> worldBars = new Dictionary<CarHealth, WorldBar>();
     RectTransform worldBarLayer, damageLayer;
@@ -265,6 +271,7 @@ public partial class Hud
 
     void OnAnyDamaged(DamageInfo d)
     {
+        if (d.victim != null && worldBars.TryGetValue(d.victim, out var bar)) { bar.sinceHit = 0f; bar.pop = 1f; }
         if (d.amount < 0.5f) return;
         bool victimIsPlayer = d.victim != null && d.victim.Identity != null && d.victim.Identity.isPlayer;
         bool attackerIsPlayer = d.attacker != null && d.attacker.isPlayer;
@@ -401,26 +408,39 @@ public partial class Hud
             if (h != null && !worldBars.ContainsKey(h)) worldBars[h] = MakeWorldBar(h, id);
         }
         Vector2 size = canvasRect.rect.size;
+        float dt = Time.deltaTime;
         foreach (var kv in worldBars)
         {
             var b = kv.Value;
+            b.sinceHit += dt;
+            float alpha = b.sinceHit < BarShowTime ? 1f : 1f - (b.sinceHit - BarShowTime) / BarFadeTime;
             bool alive = b.health != null && b.health.IsAlive;
-            if (!alive) { b.root.gameObject.SetActive(false); continue; }
+            if (!alive || alpha <= 0f) { b.root.gameObject.SetActive(false); continue; }
+
             Vector3 vp = cam.WorldToViewportPoint(b.health.transform.position + Vector3.up * 4.4f);
             bool visible = vp.z > 0f && vp.x > -0.05f && vp.x < 1.05f && vp.y > -0.05f && vp.y < 1.05f;
             b.root.gameObject.SetActive(visible);
             if (!visible) continue;
             b.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y);
-            float hp = b.health.Health / b.health.MaxHealth;
-            SetFill(b.hp, hp);
-            b.hpImg.color = HpColor(hp);
-            bool armed = b.loadout != null && b.loadout.IsArmed;
-            b.blasterRow.SetActive(armed);
-            if (armed)
+            b.group.alpha = alpha;
+
+            // Only the outermost layer the car still has.
+            BlasterTier layer = b.loadout != null ? b.loadout.Tier : BlasterTier.None;
+            if (layer != b.shownLayer) { b.shownLayer = layer; b.pop = 1.6f; }   // a layer just got shot away
+            if (layer == BlasterTier.None)
             {
-                b.blasterImg.color = b.loadout.Tier == BlasterTier.Jackpot ? GoldBar : TealBar;
-                SetFill(b.blaster, b.loadout.BlasterBar / Mathf.Max(1f, b.loadout.BlasterBarMax));
+                float hp = b.health.Health / b.health.MaxHealth;
+                SetFill(b.fill, hp);
+                b.fillImg.color = HpColor(hp);
             }
+            else
+            {
+                SetFill(b.fill, b.loadout.BlasterBar / Mathf.Max(1f, b.loadout.BlasterBarMax));
+                b.fillImg.color = layer == BlasterTier.Jackpot ? GoldBar : TealBar;
+            }
+
+            b.pop = Mathf.Max(0f, b.pop - dt * 6f);
+            b.root.localScale = Vector3.one * (1f + 0.12f * b.pop);
         }
     }
 
@@ -429,15 +449,16 @@ public partial class Hud
         var b = new WorldBar { health = h, loadout = h.GetComponent<CarLoadout>() };
         b.root = NewRect("Bar_" + id.displayName, worldBarLayer, Vector2.zero, new Vector2(10f, 10f));
         b.root.anchorMin = b.root.anchorMax = Vector2.zero;
+        b.group = b.root.gameObject.AddComponent<CanvasGroup>();
+        b.group.blocksRaycasts = false;
+        b.group.interactable = false;
+        b.shownLayer = b.loadout != null ? b.loadout.Tier : BlasterTier.None;
         b.label = NewText("Name", b.root, id.isPlayer ? "YOU" : id.displayName.ToUpper(), 13, id.color);
         b.label.fontStyle = FontStyles.Bold;
-        Anchor(b.label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 26f), new Vector2(160f, 18f));
+        Anchor(b.label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 18f), new Vector2(160f, 18f));
         Outline(b.label);
-        var blRow = NewRect("BlasterRow", b.root, Vector2.zero, Vector2.zero);
-        Anchor(blRow, new Vector2(0.5f, 0.5f), new Vector2(0f, 12f), new Vector2(84f, 10f));
-        MakeBar(blRow, Vector2.zero, new Vector2(84f, 10f), GoldBar, out b.blaster, out b.blasterImg);
-        b.blasterRow = blRow.gameObject;
-        MakeBar(b.root, Vector2.zero, new Vector2(84f, 15f), HpGreen, out b.hp, out b.hpImg);
+        MakeBar(b.root, Vector2.zero, new Vector2(88f, 16f), HpGreen, out b.fill, out b.fillImg);
+        b.root.gameObject.SetActive(false);
         return b;
     }
 

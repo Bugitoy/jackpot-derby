@@ -42,11 +42,13 @@ and give a second health bar; lose it and you're demoted. A Bad Luck Storm shrin
 - First chest at 10 s, then a new one every 25 s. Max 2 active. Each has a hidden number 1–99.
 - Spawn on open ground away from cars, with a light beam so everyone sees it; off-screen arrow on the HUD.
 - **Ram it** to try to open it, using your current number:
-  - exact → **Jackpot cannon** (or, if you already have it, full repair + full blaster bar)
-  - within ±5 → **small blaster**; if you already have the small blaster, it upgrades to the Jackpot cannon
+  - exact or within ±5 → opens it and upgrades you **one step**: no blaster → **small blaster** →
+    **Jackpot cannon**. The Jackpot cannon is only ever an upgrade of the small blaster (you can't skip
+    straight to it). Already have the cannon → its blaster bar is refilled.
+  - exact (LUCKY!) also gives a **full repair** on top of the upgrade
   - too far off → you bounce off (knockback, no damage) and the chest stays
-- Every so often (1 in 4) a **Jackpot chest** (chest_jackpot model) spawns: same rules, but within ±5 also
-  gives the Jackpot cannon.
+- Every so often (1 in 4) a **Jackpot chest** (chest_jackpot model) spawns: same upgrade rules, plus a full
+  repair even when you're only close.
 
 ## Health, blasters, demotion
 - Car health: 100. Blaster bar sits on top of it and absorbs damage first.
@@ -59,7 +61,9 @@ The player only steers; positioning is the skill. Combat is automatic, chunky, r
   "lucky bolts", the Jackpot cannon fires bigger gold-and-red bursts. Short bright trails, slight arc.
 - **Hits feel big:** white hit flash on the target, squash-and-stretch on impact, a puff/pop effect,
   floating damage numbers that pop up and fade, small screen shake when the player is hit or hits.
-- **Chunky health bars** floating above every car (car bar + blaster bar stacked), always readable.
+- **Chunky health bar** floating above a car only while it's taking damage, fading out ~1.5 s after the
+  last hit. Only one bar shows: the outermost layer the car still has (Jackpot cannon bar → small blaster
+  bar → car health). When a layer is shot away, the next one down takes its place.
 - **Turbo (Shift):** 2 s of +40% speed and +50% fire rate, 6 s cooldown, speed lines and a whoosh.
 - **Jackpot Blast (Space, Jackpot cannon only):** a big area blast in front of the car, 25 damage,
   knockback, 8 s cooldown, a slot-reel "777" flash on screen.

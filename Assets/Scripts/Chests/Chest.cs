@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// A chest with a hidden lucky number. Ram it: exact or within ±5 opens it and grants a blaster;
+/// A chest with a hidden lucky number. Ram it: exact or within ±5 opens it and upgrades your blaster one step;
 /// too far off bounces you away (no damage) and the chest stays. Every attempt shows the hint.
 /// </summary>
 public class Chest : MonoBehaviour

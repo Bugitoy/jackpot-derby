@@ -74,7 +74,7 @@ public partial class Hud : MonoBehaviour
         }
         if (loadout != null)
         {
-            loadout.RewardMessage += (msg, col) => ShowPopup(msg, col, "");
+            loadout.RewardMessage += (msg, col, sub) => ShowPopup(msg, col, sub);
             loadout.Busted += OnPlayerBusted;
         }
         BindPlayerCombat();

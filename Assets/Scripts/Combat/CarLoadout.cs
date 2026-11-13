@@ -28,53 +28,48 @@ public class CarLoadout : MonoBehaviour
     public bool IsArmed => Tier != BlasterTier.None;
 
     public event Action<BlasterTier> TierChanged;
-    /// <summary>A short message for the popup, e.g. "SMALL BLASTER!".</summary>
-    public event Action<string, Color> RewardMessage;
+    /// <summary>Popup text for a chest reward: (headline e.g. "SMALL BLASTER!", colour, small line underneath).</summary>
+    public event Action<string, Color, string> RewardMessage;
 
     static readonly Color Teal = new Color(0.30f, 0.95f, 0.80f);
     static readonly Color Gold = new Color(1f, 0.82f, 0.15f);
 
     void Awake() => RefreshVisuals();
 
-    /// <summary>exact = your number matched exactly; jackpotChest = this was a Jackpot chest.</summary>
+    /// <summary>
+    /// Opening a chest always moves you up exactly one step: no blaster → small blaster → Jackpot cannon
+    /// (the cannon is only ever an upgrade of the small blaster). Already on the cannon: refill its bar.
+    /// Bonus: an exact number (LUCKY!) or a Jackpot chest also fully repairs the car.
+    /// </summary>
     public void GrantFromChest(bool exact, bool jackpotChest)
     {
-        if (exact)
+        string msg;
+        Color col;
+        switch (Tier)
         {
-            if (Tier == BlasterTier.Jackpot)
-            {
-                var health = GetComponent<CarHealth>();
-                if (health != null) health.RepairFull();
+            case BlasterTier.None:
+                SetTier(BlasterTier.Small, smallBarMax);
+                msg = "SMALL BLASTER!"; col = Teal;
+                break;
+            case BlasterTier.Small:
+                SetTier(BlasterTier.Jackpot, jackpotBarMax);
+                msg = "UPGRADE! JACKPOT CANNON"; col = Gold;
+                break;
+            default:
                 BlasterBar = jackpotBarMax;
                 TierChanged?.Invoke(Tier);
-                RewardMessage?.Invoke("FULL REPAIR + REFILL!", Gold);
-            }
-            else
-            {
-                SetTier(BlasterTier.Jackpot, jackpotBarMax);
-                RewardMessage?.Invoke("JACKPOT CANNON!", Gold);
-            }
-            return;
+                msg = "CANNON REFILLED"; col = Gold;
+                break;
         }
 
-        // Close (within ±5).
-        if (Tier == BlasterTier.Jackpot)
+        string sub = "";
+        if (exact || jackpotChest)
         {
-            BlasterBar = jackpotBarMax;
-            TierChanged?.Invoke(Tier);
-            RewardMessage?.Invoke("BLASTER REFILLED", Gold);
+            var health = GetComponent<CarHealth>();
+            if (health != null) health.RepairFull();
+            sub = "+ FULL REPAIR";
         }
-        else if (Tier == BlasterTier.Small || jackpotChest)
-        {
-            bool upgrade = Tier == BlasterTier.Small;
-            SetTier(BlasterTier.Jackpot, jackpotBarMax);
-            RewardMessage?.Invoke(upgrade ? "UPGRADE! JACKPOT CANNON" : "JACKPOT CANNON!", Gold);
-        }
-        else
-        {
-            SetTier(BlasterTier.Small, smallBarMax);
-            RewardMessage?.Invoke("SMALL BLASTER!", Teal);
-        }
+        RewardMessage?.Invoke(msg, col, sub);
     }
 
     public void SetTier(BlasterTier tier, float bar)
