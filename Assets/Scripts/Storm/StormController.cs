@@ -208,6 +208,11 @@ public class StormController : MonoBehaviour
     {
         var z = Zone;
         Shader.SetGlobalVector(StormZoneId, new Vector4(z.xMin, z.yMin, z.xMax, z.yMax));
+
+        // Before the first shrink the zone is the whole arena: keep the storm out of sight (the city
+        // beyond the edge shouldn't look stormy), then fade it in over the first few metres.
+        float show = Mathf.Clamp01((fullZone.width - z.width) / 8f);
+        if (!Mathf.Approximately(show, shownAmount)) SetStormVisible(show);
         float far = 400f;
         // 0 north, 1 south, 2 east, 3 west.
         SetWall(0, new Vector3(z.center.x, 0f, z.yMax), new Vector3(z.width, 0f, 0f));
@@ -243,6 +248,32 @@ public class StormController : MonoBehaviour
         shape.scale = alongX ? new Vector3(len, hd.x, hd.y) : new Vector3(hd.y, hd.x, len);
         var em = ps.emission;
         em.rateOverTime = Mathf.Clamp(len * perUnit, 1.5f, maxRate);
+    }
+
+    float shownAmount = -1f;
+    MaterialPropertyBlock fadeBlock;
+    static readonly int MaxAlphaId = Shader.PropertyToID("_MaxAlpha");
+
+    void SetStormVisible(float amount)
+    {
+        shownAmount = amount;
+        fadeBlock ??= new MaterialPropertyBlock();
+        for (int i = 0; i < 4; i++)
+        {
+            foreach (var t in new[] { walls[i], darkGround[i] })
+            {
+                var r = t.GetComponent<Renderer>();
+                r.enabled = amount > 0f;
+                if (amount <= 0f || r.sharedMaterial == null) continue;
+                fadeBlock.SetFloat(MaxAlphaId, r.sharedMaterial.GetFloat(MaxAlphaId) * amount);
+                r.SetPropertyBlock(fadeBlock);
+            }
+            foreach (var ps in new[] { clouds[i], mist[i] })
+            {
+                var em = ps.emission;
+                em.enabled = amount > 0f;
+            }
+        }
     }
 
     void SetGround(int i, Vector3 centre, Vector2 size)

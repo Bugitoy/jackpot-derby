@@ -35,10 +35,9 @@ public static class ArenaBuilder
 
     static Dictionary<string, Material> mats;
     static System.Random rand;
-    /// <summary>Tunnel mouths found while laying roads: point on the edge line + direction into the arena.</summary>
-    static List<(Vector3 pos, Vector3 inward)> tunnels;
-    /// <summary>Where the garage models stand (they poke out past the wall; the outer city avoids them).</summary>
-    static List<Vector3> garageSpots;
+    static ArenaGrid arena;
+    /// <summary>Outer tiles behind each garage (the garage model pokes out past the edge into them).</summary>
+    static HashSet<Vector2Int> yards;
 
     [MenuItem("Jackpot Derby/Build Arena")]
     public static void BuildArena()
@@ -49,8 +48,11 @@ public static class ArenaBuilder
         grid.layout = ArenaGrid.DefaultLayout;
         EditorUtility.SetDirty(grid);
         grid.Parse(true);
-        tunnels = new List<(Vector3 pos, Vector3 inward)>();
-        garageSpots = new List<Vector3>();
+        arena = grid;
+        // The tile just outside each garage's back wall: the garage model stands there.
+        yards = new HashSet<Vector2Int>();
+        foreach (var gy in new[] { new Vector2Int(0, 0), new Vector2Int(grid.Width - 1, 0), new Vector2Int(0, grid.Height - 1), new Vector2Int(grid.Width - 1, grid.Height - 1) })
+            yards.Add(gy.y == 0 ? new Vector2Int(gy.x, -1) : gy.x == 0 ? new Vector2Int(-1, gy.y) : new Vector2Int(grid.Width, gy.y));
         Transform root = grid.transform;
         for (int i = root.childCount - 1; i >= 0; i--) Object.DestroyImmediate(root.GetChild(i).gameObject);
         ConfigureGroundTextures();
@@ -71,7 +73,8 @@ public static class ArenaBuilder
 
         // Ground slab under everything (its collider is what cars drive on).
         // City paving, not grass: everything past the walls is pavement under the outer city and haze.
-        var g = Box(ground, "GroundSlab", new Vector3(0, -0.5f, 0), new Vector3(w * t + 120, 1, h * t + 120), TexMat("GroundPaving", "tex_sidewalk", new Color(0.74f, 0.73f, 0.70f), 27f));
+        float outerSpan = (OuterRings + 2) * t * 2f;
+        var g = Box(ground, "GroundSlab", new Vector3(0, -0.5f, 0), new Vector3(w * t + outerSpan, 1, h * t + outerSpan), TexMat("GroundPaving", "tex_sidewalk", new Color(0.74f, 0.73f, 0.70f), 40f));
         g.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
 
         var garageDefs = new[]
@@ -124,7 +127,8 @@ public static class ArenaBuilder
             }
         }
 
-        BuildWalls(walls, outside, w * t, h * t);
+        BuildBoundary(walls, w * t, h * t);
+        BuildOuterCity(outside, t);
 
         foreach (var group in new[] { ground, roads })
             SetStaticRecursive(group.gameObject);
@@ -138,7 +142,7 @@ public static class ArenaBuilder
 
     // Only real road continues a road's painted lanes. Plazas and parks sit beside the road (its edge
     // line runs past them) instead of a lane running into their pavement and stopping dead.
-    static bool Connects(char c) => c == 'R' || c == 'X' || c == 'G';
+    static bool Connects(char c) => c == 'R' || c == 'X' || c == 'G' || c == 'O';
 
     /// <summary>Lay one road tile with the texture that matches its arms. Returns the texture used.</summary>
     static string RoadSurface(Transform parent, string id, Vector3 p, float t, bool n, bool e, bool s, bool wv, out float yaw)
@@ -164,33 +168,17 @@ public static class ArenaBuilder
 
     static void BuildRoad(Transform parent, Transform props, ArenaGrid grid, int x, int y, Vector3 p, float t, string id)
     {
-        bool n = Connects(grid.Get(x, y - 1)), s = Connects(grid.Get(x, y + 1));
-        bool e = Connects(grid.Get(x + 1, y)), wv = Connects(grid.Get(x - 1, y));
-
-        // A road that dead-ends at the arena edge runs on into a tunnel built into the wall.
-        var outward = new List<(bool edge, Vector3 dir)>
-        {
-            (grid.Get(x, y - 1) == '#' && !e && !wv, Vector3.forward),
-            (grid.Get(x, y + 1) == '#' && !e && !wv, Vector3.back),
-            (grid.Get(x + 1, y) == '#' && !n && !s, Vector3.right),
-            (grid.Get(x - 1, y) == '#' && !n && !s, Vector3.left),
-        };
-        foreach (var o in outward)
-        {
-            if (!o.edge) continue;
-            if (o.dir == Vector3.forward) n = true; else if (o.dir == Vector3.back) s = true;
-            else if (o.dir == Vector3.right) e = true; else wv = true;
-            tunnels.Add((p + o.dir * (t * 0.5f), -o.dir));
-        }
+        // Neighbours come from the extended grid, so roads leaving the arena join the outer streets.
+        bool n = Connects(Ext(x, y - 1)), s = Connects(Ext(x, y + 1));
+        bool e = Connects(Ext(x + 1, y)), wv = Connects(Ext(x - 1, y));
 
         string tex = RoadSurface(parent, id, p, t, n, e, s, wv, out float yaw);
         int count = (n ? 1 : 0) + (s ? 1 : 0) + (e ? 1 : 0) + (wv ? 1 : 0);
 
         // Straight roads get parked cars and clutter on the wide shoulders (cover for dogfights).
-        // Not on tunnel approaches: the road stays clear up to the tunnel mouth.
-        bool tunnelRoad = false;
-        foreach (var o in outward) tunnelRoad |= o.edge;
-        if (tex != "tex_road_straight" || count < 2 || tunnelRoad) return;
+        // Not on the edge tiles: roads leaving the arena stay clear up to the road-closed barrier.
+        bool edgeTile = x == 0 || y == 0 || x == grid.Width - 1 || y == grid.Height - 1;
+        if (tex != "tex_road_straight" || count < 2 || edgeTile) return;
         bool alongZ = yaw == 0f;
         Vector3 along = alongZ ? Vector3.forward : Vector3.right;
         Vector3 across = alongZ ? Vector3.right : Vector3.forward;
@@ -364,15 +352,14 @@ public static class ArenaBuilder
         Vector3 doorDir = gd.y == 0 ? Vector3.back : (gd.x == 0 ? Vector3.right : Vector3.left);
         Vector3 garagePos = p - doorDir * (t * 0.5f) - doorDir * (depth * 0.5f - 3f);
         Place(root, gd.model, garagePos, Quaternion.LookRotation(doorDir).eulerAngles.y);
-        garageSpots.Add(garagePos);
 
         // The garage tile is a real road: its lanes join the neighbouring roads and run on into the
         // garage door, so the corner reads as a driveway instead of a patch of pavement.
         Vector3 back = -doorDir;
-        bool n = Connects(grid.Get(gd.x, gd.y - 1)) || back == Vector3.forward;
-        bool s = Connects(grid.Get(gd.x, gd.y + 1)) || back == Vector3.back;
-        bool e = Connects(grid.Get(gd.x + 1, gd.y)) || back == Vector3.right;
-        bool wv = Connects(grid.Get(gd.x - 1, gd.y)) || back == Vector3.left;
+        bool n = Connects(Ext(gd.x, gd.y - 1)) || back == Vector3.forward;
+        bool s = Connects(Ext(gd.x, gd.y + 1)) || back == Vector3.back;
+        bool e = Connects(Ext(gd.x + 1, gd.y)) || back == Vector3.right;
+        bool wv = Connects(Ext(gd.x - 1, gd.y)) || back == Vector3.left;
         RoadSurface(root, "Garage", p, t, n, e, s, wv, out _);
 
         var sp = new GameObject("Spawn_" + gd.name.Replace(" ", "")).AddComponent<SpawnPoint>();
@@ -384,159 +371,182 @@ public static class ArenaBuilder
 
     // ---------- edge ----------
 
-    static void BuildWalls(Transform parent, Transform outside, float sizeX, float sizeZ)
+    /// <summary>
+    /// The edge of the drivable area, with no wall: invisible colliders, and where a road or garage
+    /// tile meets the edge, a guardrail run (or a "road closed" barrier where the road carries on
+    /// into the outer city). Elsewhere the backs of the edge buildings meet the outer city.
+    /// </summary>
+    static void BuildBoundary(Transform parent, float sizeX, float sizeZ)
     {
         var m = Mat("ArenaWall", new Color(0.55f, 0.52f, 0.48f));
-        float hgt = 3f, thick = 1f;
-        // Invisible physics walls (exact), with the wall models drawn along them.
+        float hgt = 12f, thick = 1f;
         var colliders = new[]
         {
-            Box(parent, "Wall_North", new Vector3(0, hgt / 2, sizeZ / 2 + thick / 2), new Vector3(sizeX + thick * 2, hgt * 4, thick), m),
-            Box(parent, "Wall_South", new Vector3(0, hgt / 2, -sizeZ / 2 - thick / 2), new Vector3(sizeX + thick * 2, hgt * 4, thick), m),
-            Box(parent, "Wall_East", new Vector3(sizeX / 2 + thick / 2, hgt / 2, 0), new Vector3(thick, hgt * 4, sizeZ), m),
-            Box(parent, "Wall_West", new Vector3(-sizeX / 2 - thick / 2, hgt / 2, 0), new Vector3(thick, hgt * 4, sizeZ), m),
+            Box(parent, "Edge_North", new Vector3(0, hgt / 2, sizeZ / 2 + thick / 2), new Vector3(sizeX + thick * 2, hgt, thick), m),
+            Box(parent, "Edge_South", new Vector3(0, hgt / 2, -sizeZ / 2 - thick / 2), new Vector3(sizeX + thick * 2, hgt, thick), m),
+            Box(parent, "Edge_East", new Vector3(sizeX / 2 + thick / 2, hgt / 2, 0), new Vector3(thick, hgt, sizeZ), m),
+            Box(parent, "Edge_West", new Vector3(-sizeX / 2 - thick / 2, hgt / 2, 0), new Vector3(thick, hgt, sizeZ), m),
         };
         foreach (var c in colliders) c.GetComponent<Renderer>().enabled = false;
 
-        const float seg = 6f;
-        var sides = new[]
+        int w = arena.Width, h = arena.Height;
+        float t = arena.tileSize;
+        var dirs = new[] { new Vector2Int(0, -1), new Vector2Int(0, 1), new Vector2Int(1, 0), new Vector2Int(-1, 0) };
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
         {
-            (start: new Vector3(-sizeX / 2, 0, sizeZ / 2 + 0.9f),  dir: Vector3.right,   len: sizeX, yaw: 180f),
-            (start: new Vector3(-sizeX / 2, 0, -sizeZ / 2 - 0.9f), dir: Vector3.right,   len: sizeX, yaw: 0f),
-            (start: new Vector3(sizeX / 2 + 0.9f, 0, -sizeZ / 2),  dir: Vector3.forward, len: sizeZ, yaw: 270f),
-            (start: new Vector3(-sizeX / 2 - 0.9f, 0, -sizeZ / 2), dir: Vector3.forward, len: sizeZ, yaw: 90f),
-        };
-        foreach (var sd in sides)
-        {
-            int count = Mathf.CeilToInt(sd.len / seg);
-            float step = sd.len / count;
-            for (int i = 0; i < count; i++)
+            char c = arena.Get(x, y);
+            if (c != 'R' && c != 'G') continue;
+            foreach (var d in dirs)
             {
-                Vector3 pos = sd.start + sd.dir * (step * (i + 0.5f));
-                if (NearTunnel(pos, TunnelHalfWidth + seg * 0.5f - 0.5f)) continue;
-                var wall = Place(parent, i % 5 == 2 ? "retaining_wall" : "arena_wall", pos, sd.yaw, false);
-                if (wall != null) wall.transform.localScale = new Vector3(step / seg * 1.02f, 1f, 1f);
+                int nx = x + d.x, ny = y + d.y;
+                if (nx >= 0 && ny >= 0 && nx < w && ny < h) continue;      // not an edge side
+                char o = Ext(nx, ny);
+                if (o == 'Y') continue;                                     // the garage itself stands there
+                Vector3 outward = new Vector3(d.x, 0f, -d.y);
+                Vector3 edge = arena.TileCenter(x, y) + outward * (t * 0.5f);
+                if (o == 'O') RoadClosed(parent, edge, -outward);
+                else GuardrailRun(parent, edge, -outward, t);
             }
-
         }
+    }
 
-        foreach (var tn in tunnels) BuildTunnel(parent, tn.pos, tn.inward);
-        BuildOuterCity(outside, sizeX, sizeZ);
+    /// <summary>Guardrails along one tile side at the edge, facing into the arena.</summary>
+    static void GuardrailRun(Transform parent, Vector3 edge, Vector3 inward, float len)
+    {
+        float yaw = Quaternion.LookRotation(inward).eulerAngles.y;
+        Vector3 along = new Vector3(inward.z, 0f, -inward.x);
+        for (int i = -1; i <= 1; i++)
+            Place(parent, "guardrail", edge - inward * 0.3f + along * (i * len / 3f), yaw, false);
+    }
+
+    /// <summary>Where an arena road carries on into the outer city: barriers and cones across it.</summary>
+    static void RoadClosed(Transform parent, Vector3 edge, Vector3 inward)
+    {
+        float yaw = Quaternion.LookRotation(inward).eulerAngles.y;
+        Vector3 side = new Vector3(inward.z, 0f, -inward.x);
+        // The barrier model's long side is its Z axis: turn it 90° so it spans the road.
+        for (int i = -1; i <= 1; i++)
+            Place(parent, "barrier", edge - inward * 0.2f + side * (i * 2.7f), yaw + 90f, false);
+        Place(parent, "cone", edge + inward * 1.2f + side * 4.4f, yaw, false);
+        Place(parent, "cone", edge + inward * 1.2f - side * 4.4f, yaw + 30f, false);
     }
 
     // ---------- outer city ----------
 
-    const int OuterRows = 3;
-    const float OuterLot = 12f;      // lot width along the wall
-    const float OuterRowDepth = 13.5f; // lot depth: buildings ~10.8 deep leave ~2.7-unit footpaths between rows
-    static readonly string[] TallPool = { "apartment_brick", "apartment_cream", "apartment_cream_2", "apartment_teal", "house_tall", "store_grocer" };
-    static readonly string[] PathPool = { "metal_drums", "park_bench", "potted_plants", "trash_bags", "fire_hydrant", "mailbox", "tree_planter", "bush_large" };
+    /// <summary>How many tile rings of scenery city surround the arena.</summary>
+    const int OuterRings = 5;
+    static readonly string[] TallPool = { "apartment_brick", "apartment_cream", "apartment_cream_2", "apartment_teal", "house_tall", "store_grocer", "store_pawn" };
 
     /// <summary>
-    /// A wide band of dense city outside the walls so the edge blends into a skyline instead of
-    /// stopping: rows of buildings packed shoulder to shoulder (gaps too narrow for a car) along
-    /// narrow footpaths, getting taller further out, fading into the haze. No colliders; the far rows
-    /// cast no shadows.
+    /// The tile at (x, y) on a grid that extends past the arena. Inside: the arena layout. Outside, in
+    /// rings that get tighter toward the edge of the world:
+    ///   ring 1 blocks (B) like the arena's   ring 2 road (O)   ring 3 blocks   ring 4 road
+    ///   ring 5 tight lots (D), with tunnels (T) at the end of the streets leaving the arena.
+    /// Streets (O) cross rings 1 and 3, carrying on from the arena's mid roads; Y = garage yard.
     /// </summary>
-    static void BuildOuterCity(Transform parent, float sizeX, float sizeZ)
+    static char Ext(int x, int y)
     {
-        float band = OuterRows * OuterRowDepth + 2f;
+        int w = arena.Width, h = arena.Height;
+        if (x >= 0 && y >= 0 && x < w && y < h) return arena.Get(x, y);
+        int dx = x < 0 ? -x : x >= w ? x - w + 1 : 0;
+        int dy = y < 0 ? -y : y >= h ? y - h + 1 : 0;
+        int r = Mathf.Max(dx, dy);
+        if (r > OuterRings) return '#';
+        bool ns = dx == 0, ew = dy == 0; // straight out from a side (not a corner)
+        int midX = w / 2, midY = h / 2;
+        if (r == 2 || r == 4) return 'O';
+        if (r == 5) return (ns && x == midX) || (ew && y == midY) ? 'T' : 'D';
+        if ((ns && x == midX) || (ew && y == midY)) return 'O';
+        if (r == 3 && ((ns && (x == 3 || x == w - 4)) || (ew && (y == 2 || y == h - 3)))) return 'O';
+        if (r == 1 && yards.Contains(new Vector2Int(x, y))) return 'Y';
+        return 'B';
+    }
 
-        // Sides: 0 north, 1 south, 2 east, 3 west. North/south run the full width incl. corners.
-        var sides = new[]
-        {
-            (centre: new Vector3(0f, 0f, sizeZ / 2f),  inward: Vector3.back,    len: sizeX + band * 2f),
-            (centre: new Vector3(0f, 0f, -sizeZ / 2f), inward: Vector3.forward, len: sizeX + band * 2f),
-            (centre: new Vector3(sizeX / 2f, 0f, 0f),  inward: Vector3.left,    len: sizeZ),
-            (centre: new Vector3(-sizeX / 2f, 0f, 0f), inward: Vector3.right,   len: sizeZ),
-        };
-        foreach (var sd in sides)
-        {
-            Vector3 outward = -sd.inward;
-            Vector3 along = new Vector3(sd.inward.z, 0f, -sd.inward.x);
-            float yaw = Quaternion.LookRotation(sd.inward).eulerAngles.y;
+    /// <summary>Direction from an outer tile back toward the arena (the way its buildings face).</summary>
+    static Vector3 Inward(int x, int y)
+    {
+        int w = arena.Width, h = arena.Height;
+        int dx = x < 0 ? -x : x >= w ? x - w + 1 : 0;
+        int dy = y < 0 ? -y : y >= h ? y - h + 1 : 0;
+        if (dy >= dx) return y < 0 ? Vector3.back : Vector3.forward;
+        return x < 0 ? Vector3.right : Vector3.left;
+    }
 
-            // One raised pavement slab per side (tiled so each sidewalk tile is ~6 units).
-            var slab = Box(parent, "OuterPaving", sd.centre + outward * (band / 2f + 1f) + Vector3.up * 0.06f,
-                new Vector3(sd.len, 0.12f, band), OuterPavingMat(sd.len, band), false);
-            slab.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+    /// <summary>
+    /// Scenery city around the arena (not drivable: the edge colliders keep cars in). Spacing tightens
+    /// ring by ring: blocks with ~1.6-unit gaps and streets, then ~1-unit gaps, then lots packed
+    /// shoulder to shoulder, while heights rise only a little. Buildings face the arena; they keep
+    /// their box colliders so the chase camera can't swing inside them.
+    /// </summary>
+    static void BuildOuterCity(Transform parent, float t)
+    {
+        int w = arena.Width, h = arena.Height;
+        var roads = Group(parent, "OuterRoads");
+        var lots = Group(parent, "OuterLots");
+        var walkway = TexMat("OuterSidewalk", "tex_sidewalk", new Color(0.92f, 0.91f, 0.88f), 2f);
+        for (int y = -OuterRings; y < h + OuterRings; y++)
+        for (int x = -OuterRings; x < w + OuterRings; x++)
+        {
+            char c = Ext(x, y);
+            if (c == '#' || (x >= 0 && y >= 0 && x < w && y < h)) continue;
+            Vector3 p = arena.TileCenter(x, y);
+            string id = $"o{x}_{y}";
+            int dx = x < 0 ? -x : x >= w ? x - w + 1 : 0;
+            int dy = y < 0 ? -y : y >= h ? y - h + 1 : 0;
+            int ring = Mathf.Max(dx, dy);
+            Vector3 inward = Inward(x, y);
+
+            if (c == 'O')
+            {
+                bool n = Connects(Ext(x, y - 1)) || Ext(x, y - 1) == 'T', s = Connects(Ext(x, y + 1)) || Ext(x, y + 1) == 'T';
+                bool e = Connects(Ext(x + 1, y)) || Ext(x + 1, y) == 'T', wv = Connects(Ext(x - 1, y)) || Ext(x - 1, y) == 'T';
+                string tex = RoadSurface(roads, id, p, t, n, e, s, wv, out float yaw);
+                // A few parked cars so the outer streets look lived in.
+                if (tex == "tex_road_straight" && rand.NextDouble() < 0.25)
+                {
+                    Vector3 across = yaw == 0f ? Vector3.right : Vector3.forward;
+                    Place(lots, Pick(ShoulderPool), p + across * (t * 0.36f) * (rand.Next(2) == 0 ? 1 : -1), yaw + (rand.Next(2) == 0 ? 0f : 180f), false);
+                }
+                continue;
+            }
+
+            var slab = Box(lots, $"Lot_{id}", p + Vector3.up * 0.06f, new Vector3(t, 0.12f, t), walkway, false);
             slab.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
             slab.isStatic = true;
+            float faceYaw = Quaternion.LookRotation(inward).eulerAngles.y;
 
-            int lots = Mathf.FloorToInt(sd.len / OuterLot);
-            float first = -(lots - 1) * OuterLot / 2f;
-            for (int row = 0; row < OuterRows; row++)
+            if (c == 'Y') continue; // the garage model stands here
+            if (c == 'T') { BuildTunnel(lots, p + inward * (t * 0.5f), inward); continue; }
+
+            // Fill and height by ring: gaps close up and roofs rise gently toward the edge.
+            float fill = ring == 1 ? 10.3f : ring == 3 ? 11.0f : 11.7f;
+            float tall = ring == 1 ? 0.9f + (float)rand.NextDouble() * 0.2f
+                       : ring == 3 ? 1.0f + (float)rand.NextDouble() * 0.25f
+                       : 1.15f + (float)rand.NextDouble() * 0.3f;
+            string model = ring >= 5 ? Pick(TallPool) : Pick(BuildingPool);
+            var b = Place(lots, model, p, faceYaw, true);
+            if (b == null) continue;
+            Vector3 ms = b.GetComponent<MeshFilter>().sharedMesh.bounds.size;
+            float sc = (fill + (float)rand.NextDouble() * 0.3f) / Mathf.Max(ms.x, ms.z);
+            b.transform.localScale = new Vector3(sc, sc * tall, sc);
+            var br = b.GetComponent<Renderer>();
+            if (ring > 1) br.shadowCastingMode = ShadowCastingMode.Off;
+            if (ring == 1 && rand.NextDouble() < 0.4) DressRoof(lots, b, faceYaw);
+
+            // A street lamp on the pavement where a block faces a road.
+            if (ring <= 3 && Connects(Ext(x + (int)inward.x, y - (int)inward.z)) && rand.NextDouble() < 0.45)
             {
-                float depth = 2.5f + OuterRowDepth * (row + 0.5f);
-                for (int i = 0; i < lots; i++)
-                {
-                    Vector3 pos = sd.centre + along * (first + i * OuterLot) + outward * depth;
-                    if (InsideArena(pos, sizeX, sizeZ, 1f)) continue;
-                    if (NearGarage(pos, 13f)) continue;
-                    if (row == 0 && NearTunnel(pos, TunnelHalfWidth + 5f)) continue;
-
-                    string model = row == 0 ? Pick(BuildingPool) : Pick(TallPool);
-                    var b = Place(parent, model, pos, yaw, false);
-                    if (b == null) continue;
-                    // Fill the lot: footprint ~10.6-11 along the wall, so alleys are only ~1-1.4 wide.
-                    Vector3 ms = b.GetComponent<MeshFilter>().sharedMesh.bounds.size;
-                    float s = (10.6f + (float)rand.NextDouble() * 0.4f) / Mathf.Max(ms.x, ms.z);
-                    float tall = row == 0 ? 1.0f + (float)rand.NextDouble() * 0.25f
-                                          : 1.25f + row * 0.25f + (float)rand.NextDouble() * 0.35f;
-                    b.transform.localScale = new Vector3(s, s * tall, s);
-                    if (row > 0) b.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
-                    if (row == 0 && rand.NextDouble() < 0.35) DressRoof(parent, b, yaw);
-
-                    // Footpath furniture in the alley in front of the first two rows.
-                    if (row < 2 && i % 2 == 0)
-                    {
-                        Vector3 path = pos + sd.inward * (OuterRowDepth * 0.5f - 0.4f);
-                        if (rand.NextDouble() < 0.7) Place(parent, "street_lamp", path + along * 4.5f, yaw, false);
-                        if (rand.NextDouble() < 0.6) Place(parent, Pick(PathPool), path - along * 3f, yaw, false);
-                    }
-                }
+                Vector3 side = new Vector3(inward.z, 0f, -inward.x);
+                Place(lots, "street_lamp", p + inward * (t * 0.5f - 0.45f) + side * t * 0.38f * (rand.Next(2) == 0 ? 1 : -1), faceYaw, false);
             }
         }
-    }
-
-    static Material OuterPavingMat(float len, float depth)
-    {
-        string name = $"OuterPaving_{Mathf.RoundToInt(len)}";
-        var m = TexMat(name, "tex_sidewalk", new Color(0.86f, 0.85f, 0.82f), 1f);
-        m.SetTextureScale("_BaseMap", new Vector2(len / 6f, depth / 6f));
-        return m;
-    }
-
-    static bool InsideArena(Vector3 p, float sizeX, float sizeZ, float margin) =>
-        Mathf.Abs(p.x) < sizeX / 2f + margin && Mathf.Abs(p.z) < sizeZ / 2f + margin;
-
-    static bool NearGarage(Vector3 p, float range)
-    {
-        foreach (var g in garageSpots)
-        {
-            Vector3 d = p - g; d.y = 0f;
-            if (d.magnitude < range) return true;
-        }
-        return false;
-    }
-
-    const float TunnelHalfWidth = 6f;
-
-    /// <summary>True if a point on the edge band is within `range` (along the wall) of a tunnel mouth.</summary>
-    static bool NearTunnel(Vector3 pos, float range)
-    {
-        foreach (var tn in tunnels)
-        {
-            Vector3 d = pos - tn.pos; d.y = 0f;
-            Vector3 along = new Vector3(tn.inward.z, 0f, -tn.inward.x);
-            if (Mathf.Abs(Vector3.Dot(d, along)) < range && Mathf.Abs(Vector3.Dot(d, tn.inward)) < 30f) return true;
-        }
-        return false;
+        SetStaticRecursive(roads.gameObject);
     }
 
     /// <summary>
-    /// A tunnel built into the wall line, its mouth facing into the arena so the player sees it.
-    /// The invisible edge collider still closes it; a barrier and cones sit across the mouth.
+    /// A tunnel at the end of an outer street, its mouth facing the arena so it can be seen down the
+    /// road. A barrier and cones sit across the mouth.
     /// </summary>
     static void BuildTunnel(Transform parent, Vector3 mouth, Vector3 inward)
     {

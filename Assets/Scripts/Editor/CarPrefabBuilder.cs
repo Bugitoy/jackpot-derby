@@ -71,6 +71,8 @@ public static class CarPrefabBuilder
 
         root.AddComponent<CarMotor>();
         root.AddComponent<CarVisualTilt>();
+        var wheels = root.AddComponent<WheelSpinner>();
+        ModelPrefabUtil.SetField(wheels, "model", model.transform);
         root.AddComponent<Odometer>();
         root.AddComponent<CarHealth>();
         var loadout = root.AddComponent<CarLoadout>();

@@ -360,7 +360,10 @@ public static class SceneryKit
     {
         var imp = AssetImporter.GetAtPath(path) as TextureImporter;
         if (imp == null) return;
-        imp.textureType = kind == TexKind.Normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+        // Normal maps stay plain linear RGB textures, exactly like glTFast imports them: the glTF shader
+        // unpacks raw RGB. Importing them as Unity "Normal map" re-encodes them (DXTnm) and the shader
+        // then misreads them, which showed up as blotchy patches on every PBR model.
+        imp.textureType = TextureImporterType.Default;
         imp.sRGBTexture = kind == TexKind.Color;
         imp.maxTextureSize = 2048;
         imp.mipmapEnabled = true;

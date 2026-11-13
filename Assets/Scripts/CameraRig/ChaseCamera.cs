@@ -130,6 +130,8 @@ public class ChaseCamera : MonoBehaviour
         {
             var h = hits[i];
             if (h.collider.attachedRigidbody != null) continue;          // cars and pushable things
+            // Invisible edge colliders: the camera may look over the edge into the outer city.
+            if (h.collider.TryGetComponent<Renderer>(out var rr) && !rr.enabled) continue;
             if (h.distance <= 0f) continue;                               // already overlapping at the car
             var b = h.collider.bounds.size;
             if (b.y < minBlockerHeight) continue;                         // props, parked cars, benches
