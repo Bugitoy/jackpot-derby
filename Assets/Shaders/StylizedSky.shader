@@ -12,6 +12,12 @@ Shader "JackpotDerby/StylizedSky"
         _GradientPower ("Gradient Power", Range(0.1, 2)) = 0.55
         _HorizonHaze ("Horizon Haze", Range(0, 1)) = 0.55
         _HazeFalloff ("Haze Falloff", Range(1, 40)) = 12
+        _Bands ("Cartoon Bands (0 = smooth)", Range(0, 8)) = 0
+        _BandSoftness ("Band Edge Softness", Range(0.01, 0.5)) = 0.15
+
+        [Header(Cartoon Sun)]
+        [Toggle] _ToonSun ("Cartoon Sun (flat disk + ring)", Float) = 0
+        _SunRingColor ("Sun Ring Colour", Color) = (1, 0.95, 0.7, 1)
 
         [Header(Sun)]
         _SunDir ("Sun Direction (world, towards sun)", Vector) = (0.4, 0.3, 0.6, 0)
@@ -44,7 +50,8 @@ Shader "JackpotDerby/StylizedSky"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _ZenithColor, _HorizonColor, _GroundColor;
-                float _GradientPower, _HorizonHaze, _HazeFalloff;
+                float _GradientPower, _HorizonHaze, _HazeFalloff, _Bands, _BandSoftness, _ToonSun;
+                half4 _SunRingColor;
                 float4 _SunDir;
                 half4 _SunColor;
                 float _SunSize, _SunIntensity, _GlowIntensity;
@@ -103,7 +110,14 @@ Shader "JackpotDerby/StylizedSky"
 
                 // Atmosphere: horizon to zenith, slightly warmer toward the sun.
                 float up = saturate(h);
-                float3 sky = lerp(_HorizonColor.rgb, _ZenithColor.rgb, pow(up, _GradientPower));
+                float g = pow(up, _GradientPower);
+                // Cartoon: the gradient steps in a few soft-edged bands, like a painted backdrop.
+                if (_Bands > 0.5)
+                {
+                    float b = g * _Bands;
+                    g = (floor(b) + smoothstep(0.5 - _BandSoftness, 0.5 + _BandSoftness, frac(b))) / _Bands;
+                }
+                float3 sky = lerp(_HorizonColor.rgb, _ZenithColor.rgb, g);
                 float towardSun = saturate(cosSun * 0.5 + 0.5);
                 sky = lerp(sky, sky * _SunColor.rgb * 1.08, towardSun * towardSun * 0.35);
                 sky = lerp(sky, _GroundColor.rgb, saturate(-h * 6.0));
@@ -132,8 +146,20 @@ Shader "JackpotDerby/StylizedSky"
                 }
 
                 // Sun disk, hidden behind thick cloud.
-                float disk = smoothstep(1.0 - _SunSize, 1.0 - _SunSize * 0.6, cosSun);
-                sky += _SunColor.rgb * disk * _SunIntensity * (1.0 - cloud * 0.9);
+                float disk;
+                if (_ToonSun > 0.5)
+                {
+                    // Flat, crisp disk with a pale ring around it.
+                    disk = smoothstep(1.0 - _SunSize, 1.0 - _SunSize * 0.9, cosSun);
+                    float ring = smoothstep(1.0 - _SunSize * 3.2, 1.0 - _SunSize * 3.0, cosSun) * (1.0 - disk);
+                    sky = lerp(sky, _SunRingColor.rgb, ring * 0.35 * (1.0 - cloud));
+                    sky = lerp(sky, _SunColor.rgb * _SunIntensity, disk * (1.0 - cloud * 0.9));
+                }
+                else
+                {
+                    disk = smoothstep(1.0 - _SunSize, 1.0 - _SunSize * 0.6, cosSun);
+                    sky += _SunColor.rgb * disk * _SunIntensity * (1.0 - cloud * 0.9);
+                }
 
                 // Haze band at the horizon, matching the fog colour.
                 float haze = exp(-abs(h) * _HazeFalloff) * _HorizonHaze;

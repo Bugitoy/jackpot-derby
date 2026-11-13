@@ -37,7 +37,8 @@ public class ChaseCamera : MonoBehaviour
     [SerializeField] float minBlockerHeight = 3.5f;
     [Tooltip("How far the camera rises when a building squeezes it right up to the car.")]
     [SerializeField] float squeezeLift = 4.5f;
-    [SerializeField] float farClip = 220f;
+    [Tooltip("Far enough for the sky clouds round the map.")]
+    [SerializeField] float farClip = 340f;
 
     /// <summary>Extra offset added on top (screen shake writes here).</summary>
     public Vector3 ShakeOffset { get; set; }

@@ -63,7 +63,8 @@ public static class LookSetup
 
         // Sky: atmosphere gradient, sun and drifting clouds. The fog uses the sky's horizon colour and
         // stays thin, so only far-off buildings fade (aerial perspective), not the whole view.
-        Color horizon = new Color(0.76f, 0.85f, 0.93f);
+        // Cartoon palette: a clear saturated blue overhead, a bright minty-blue horizon.
+        Color horizon = new Color(0.68f, 0.88f, 0.98f);
         RenderSettings.sun = light;
         RenderSettings.skybox = SkyMaterial(light, horizon);
         RenderSettings.fog = true;
@@ -82,6 +83,8 @@ public static class LookSetup
             cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = horizon;
         }
+
+        BuildSkyClouds(light);
 
         // A reflection probe over the arena, rendered once at start, so shiny surfaces reflect the
         // city and sky instead of the flat default.
@@ -131,8 +134,68 @@ public static class LookSetup
         m.SetVector("_SunDir", -(Quaternion.Euler(SkySunElevation, SunAzimuth, 0f) * Vector3.forward));
         m.SetColor("_HorizonColor", horizon);
         m.SetColor("_SunColor", light.color);
+        // Cartoon look: soft painted bands instead of a smooth realistic gradient, no noise clouds
+        // (the cloud models replace them), and a flat sun disk with a pale ring.
+        m.SetColor("_ZenithColor", new Color(0.18f, 0.50f, 0.96f));
+        m.SetFloat("_GradientPower", 0.7f);
+        m.SetFloat("_Bands", 4f);
+        m.SetFloat("_BandSoftness", 0.18f);
+        m.SetFloat("_HorizonHaze", 0.35f);
+        m.SetFloat("_CloudOpacity", 0f);
+        m.SetFloat("_ToonSun", 1f);
+        m.SetColor("_SunColor", new Color(1f, 0.96f, 0.72f));
+        m.SetColor("_SunRingColor", new Color(1f, 0.97f, 0.82f));
+        m.SetFloat("_SunSize", 0.0016f);
+        m.SetFloat("_SunIntensity", 1.6f);
+        m.SetFloat("_GlowIntensity", 0.3f);
         EditorUtility.SetDirty(m);
         return m;
+    }
+
+    /// <summary>
+    /// Lefika's cartoon cloud model scattered round the sky: a ring of clouds just above the
+    /// skyline, each drifting slowly round the map and turning to face the camera (SkyCloud).
+    /// Toon-shaded and fog-free so they stay bright white against the sky.
+    /// </summary>
+    static void BuildSkyClouds(Light light)
+    {
+        var old = GameObject.Find("SkyClouds");
+        if (old != null) Object.DestroyImmediate(old);
+        var prefab = SceneryKit.Get("cloud") ?? SceneryKit.BuildOne("cloud");
+        if (prefab == null) { Debug.LogWarning("[LookSetup] No cloud model (Assets/Models/cloud.glb)."); return; }
+
+        ModelPrefabUtil.EnsureFolder("Assets/Materials/Sky");
+        const string matPath = "Assets/Materials/Sky/SkyCloud.mat";
+        var shader = Shader.Find("JackpotDerby/ToonCloud");
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+        if (mat == null) { mat = new Material(shader); AssetDatabase.CreateAsset(mat, matPath); }
+        mat.shader = shader;
+        mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Scenery/Textures/cloud.png"));
+        mat.SetColor("_ShadeColor", new Color(0.70f, 0.80f, 0.97f));
+        EditorUtility.SetDirty(mat);
+
+        var root = new GameObject("SkyClouds").transform;
+        var rng = new System.Random(11);
+        // The model is a little cluster of puffs, so a few big ones at varied heights and distances
+        // look natural; many small ones look like wallpaper.
+        const int count = 15;
+        for (int i = 0; i < count; i++)
+        {
+            float a = (i + (float)rng.NextDouble() * 0.8f) / count * Mathf.PI * 2f;
+            float dist = 200f + (float)rng.NextDouble() * 100f;
+            // Low enough above the skyline for the low chase camera to see them.
+            float height = 34f + (float)rng.NextDouble() * 46f;
+            var c = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root);
+            c.name = "Cloud";
+            c.transform.position = new Vector3(Mathf.Cos(a) * dist, height, Mathf.Sin(a) * dist);
+            c.transform.localScale = Vector3.one * (50f + (float)rng.NextDouble() * 50f);
+            var r = c.GetComponent<MeshRenderer>();
+            r.sharedMaterial = mat;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            var sc = c.AddComponent<SkyCloud>();
+            sc.speed = 0.8f + (float)rng.NextDouble() * 1.2f;
+        }
     }
 
     const string StormProfilePath = "Assets/Settings/StormVolumeProfile.asset";

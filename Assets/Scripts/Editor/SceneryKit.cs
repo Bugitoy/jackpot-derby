@@ -108,6 +108,7 @@ public static class SceneryKit
         new Spec("slot_machine",    1.4f),
         new Spec("coin",            1.0f, Col.None),
         new Spec("wheel",           0.98f, Col.None), // Lefika's car wheel (replaces the Tripo cars' gappy wheels)
+        new Spec("cloud",           1.0f, Col.None),  // Lefika's cartoon cloud (sky dressing, see LookSetup)
         new Spec("road_slab_lucky", 6.0f, Col.None),
     };
 

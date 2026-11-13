@@ -81,7 +81,7 @@ public static class ArenaBuilder
 
         // Ground slab under everything (its collider is what cars drive on).
         // City paving, not grass: everything past the walls is pavement under the outer city and haze.
-        float outerSpan = (OuterRings + 2) * t * 2f;
+        float outerSpan = (OuterRings + DeepRings + 2) * t * 2f;
         // Same sidewalk look as everywhere else, tiled at the same scale (one repeat per 6 units).
         Vector3 slabSize = new Vector3(w * t + outerSpan, 1, h * t + outerSpan);
         var groundMat = TexMat("GroundSidewalk", "tex_sidewalk", Color.white, 1f);
@@ -566,6 +566,46 @@ public static class ArenaBuilder
             }
         }
         SetStaticRecursive(roads.gameObject);
+        BuildDeepRings(lots, t);
+    }
+
+    /// <summary>Extra rows of buildings beyond the tight lots, so the city edge has depth.</summary>
+    const int DeepRings = 2;
+
+    /// <summary>
+    /// Rows past the last ring, staggered so the gaps never line up: every other row is shifted
+    /// half a lot sideways, and each building is nudged left/right, back/forward and turned slightly.
+    /// Looking down a gap between two buildings, you see the middle of a building behind it.
+    /// No colliders or shadows (nothing can get out there).
+    /// </summary>
+    static void BuildDeepRings(Transform parent, float t)
+    {
+        int w = arena.Width, h = arena.Height;
+        for (int ring = OuterRings + 1; ring <= OuterRings + DeepRings; ring++)
+        {
+            float stagger = (ring - OuterRings) % 2 == 1 ? t * 0.5f : 0f;
+            for (int y = -ring; y < h + ring; y++)
+            for (int x = -ring; x < w + ring; x++)
+            {
+                int dx = x < 0 ? -x : x >= w ? x - w + 1 : 0;
+                int dy = y < 0 ? -y : y >= h ? y - h + 1 : 0;
+                if (Mathf.Max(dx, dy) != ring) continue;
+                Vector3 inward = Inward(x, y);
+                Vector3 along = new Vector3(inward.z, 0f, -inward.x);
+                float sideJitter = ((float)rand.NextDouble() - 0.5f) * 2.4f;
+                float depthJitter = ((float)rand.NextDouble() - 0.5f) * 2.4f;
+                Vector3 p = arena.TileCenter(x, y) + along * (stagger + sideJitter) - inward * depthJitter;
+
+                float yaw = Quaternion.LookRotation(inward).eulerAngles.y + ((float)rand.NextDouble() - 0.5f) * 14f;
+                var b = Place(parent, PickBuilding(new Vector2Int(x, y), EdgePool), p, yaw, false);
+                if (b == null) continue;
+                Vector3 ms = b.GetComponent<MeshFilter>().sharedMesh.bounds.size;
+                float sc = (11.0f + (float)rand.NextDouble() * 0.6f) / Mathf.Max(ms.x, ms.z);
+                float tall = 1.2f + (ring - OuterRings) * 0.1f + (float)rand.NextDouble() * 0.35f;
+                b.transform.localScale = new Vector3(sc, sc * tall, sc);
+                b.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            }
+        }
     }
 
     /// <summary>
