@@ -114,6 +114,10 @@ grid with a garage in each corner and the Bad Luck Storm clouds around the edge.
   No grass outside; parks use a soft sage lawn (grass_tuft model gets scattered when added).
 - Model textures: keep SceneryKit's high-quality compression (BC7-class). Fully uncompressed (~2 GB)
   doesn't fit a WebGL build. Normal maps must stay plain linear textures (not "Normal map" import).
+  Never reference a .glb's own materials from anything in the build (its embedded textures are raw,
+  ~17 MB each): after any gameplay prefab builder, re-run Jackpot Derby/Compress Gameplay Model
+  Textures; menu 3D views use the Prefabs/Display copies (Build Menu Display Models). itch.io limits
+  each file to ~200 MB, so check the build's WebGL.data size.
 - Road lanes only connect to road/roundabout/garage tiles; plazas and parks sit beside roads.
 - Streets: a grid of 2-lane roads with intersections, T-junctions and a few curves, plus a central
   roundabout. Build road surfaces, sidewalks and curbs in Unity (planes/ProBuilder) using the textures in

@@ -673,7 +673,7 @@ public static class SceneryKit
     {
         foreach (var f in new[] { TexFolder, MatFolder }) ModelPrefabUtil.EnsureFolder(f);
         var swaps = new Dictionary<Material, Material>();
-        var guids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Cars", "Assets/Prefabs/Combat", "Assets/Prefabs/Pickups" });
+        var guids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Cars", "Assets/Prefabs/Combat", "Assets/Prefabs/Pickups", SceneSetup.DisplayFolder });
         foreach (var g in guids)
         {
             string prefabPath = AssetDatabase.GUIDToAssetPath(g);

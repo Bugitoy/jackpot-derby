@@ -108,7 +108,7 @@ public static class SceneSetup
     {
         var menus = sys.GetComponent<Menus>();
         if (menus == null) menus = sys.AddComponent<Menus>();
-        GameObject Model(string n) => AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Models/{n}.glb");
+        GameObject Model(string n) => DisplayModel(n);
         ModelPrefabUtil.SetField(menus, "carModel", Model("car"));
         ModelPrefabUtil.SetField(menus, "chestModel", Model("chest"));
         ModelPrefabUtil.SetField(menus, "blasterModel", Model("blaster_jackpot"));
@@ -118,6 +118,41 @@ public static class SceneSetup
         ModelPrefabUtil.SetField(menus, "cloverModel", cloverVisual != null ? cloverVisual.gameObject : Model("clover_pickup"));
         ModelPrefabUtil.SetField(menus, "catModel", Model("black_cat"));
         ModelPrefabUtil.SetField(menus, "trophyModel", Model("trophy"));
+    }
+
+    public const string DisplayFolder = "Assets/Prefabs/Display";
+
+    /// <summary>
+    /// A script-free copy of a model for the menus' 3D views. Pointing the menus at the .glb itself would
+    /// pull its raw, uncompressed embedded textures (~17 MB each) into the WebGL build; this copy only
+    /// references the meshes, and SceneryKit.CompressGameplayTextures swaps in the compressed materials.
+    /// </summary>
+    static GameObject DisplayModel(string n)
+    {
+        ModelPrefabUtil.EnsureFolder(DisplayFolder);
+        string path = $"{DisplayFolder}/{n}.prefab";
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        if (existing != null) return existing;
+        var glb = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Models/{n}.glb");
+        if (glb == null) return null;
+        var inst = (GameObject)PrefabUtility.InstantiatePrefab(glb);
+        PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        inst.name = n;
+        var prefab = PrefabUtility.SaveAsPrefabAsset(inst, path);
+        Object.DestroyImmediate(inst);
+        return prefab;
+    }
+
+    /// <summary>Re-points the menus at the display copies and compresses their textures (open scene).</summary>
+    [MenuItem("Jackpot Derby/Build Menu Display Models")]
+    public static void BuildMenuDisplayModels()
+    {
+        var menus = Object.FindAnyObjectByType<Menus>(FindObjectsInactive.Include);
+        if (menus == null) { Debug.LogError("No Menus in the open scene."); return; }
+        SetupMenus(menus.gameObject);
+        SceneryKit.CompressGameplayTextures();
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(menus.gameObject.scene);
+        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(menus.gameObject.scene);
     }
 
     public static void SetupPlayerCameraLight()
