@@ -2,13 +2,17 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// The car's lucky number (1–99, wrapping). Driving forward counts up 1 per 3 units, reversing counts
+/// The car's lucky number (1–100, wrapping 100 -> 1). Driving forward counts up 1 per 3 units, reversing counts
 /// down. Stopping (after having moved) locks the number and reveals a hint against the nearest chest.
 /// A locked number stays locked while you drive; Unlock() (R key, chest, dice, cat) lets it roll again.
 /// </summary>
 [RequireComponent(typeof(CarMotor))]
 public class Odometer : MonoBehaviour
 {
+    /// <summary>The lucky number runs Min..Max and wraps round (100 -> 1, 1 -> 100).</summary>
+    public const int Min = 1, Max = 100;
+    public const int Count = Max - Min + 1;
+
     [SerializeField] float unitsPerNumber = 3f;
     [Tooltip("Below this speed the car counts as stopped.")]
     [SerializeField] float stopSpeed = 0.5f;
@@ -38,7 +42,7 @@ public class Odometer : MonoBehaviour
     void Awake()
     {
         motor = GetComponent<CarMotor>();
-        Number = UnityEngine.Random.Range(1, 100);
+        Number = UnityEngine.Random.Range(Min, Max + 1);
     }
 
     void FixedUpdate()
@@ -60,7 +64,7 @@ public class Odometer : MonoBehaviour
         while (distance <= -unitsPerNumber) { distance += unitsPerNumber; SetNumberInternal(Wrap(Number - 1)); }
     }
 
-    public static int Wrap(int n) => ((n - 1) % 99 + 99) % 99 + 1;
+    public static int Wrap(int n) => ((n - Min) % Count + Count) % Count + Min;
 
     void OnStopped()
     {

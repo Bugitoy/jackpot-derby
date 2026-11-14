@@ -111,9 +111,27 @@ public static class CombatAssetBuilder
     /// <summary>Material for coin particles: the coin model's own material if it has been built.</summary>
     public static Material CoinMaterial()
     {
+        // The burst of coins when a car is destroyed: the scenery coin's own material, copied and made
+        // to glow warm gold from its texture (and shinier) so the coins read bright even in shade.
         var coin = SceneryKit.Get("coin");
-        if (coin != null && coin.GetComponent<MeshRenderer>().sharedMaterial != null)
-            return coin.GetComponent<MeshRenderer>().sharedMaterial;
+        var src = coin != null ? coin.GetComponent<MeshRenderer>().sharedMaterial : null;
+        if (src != null)
+        {
+            ModelPrefabUtil.EnsureFolder("Assets/Materials/FX");
+            const string brightPath = "Assets/Materials/FX/FxCoinBright.mat";
+            var bright = AssetDatabase.LoadAssetAtPath<Material>(brightPath);
+            if (bright == null) { bright = new Material(src); AssetDatabase.CreateAsset(bright, brightPath); }
+            bright.CopyPropertiesFromMaterial(src);
+            bright.shader = src.shader;
+            var tex = src.HasProperty("baseColorTexture") ? src.GetTexture("baseColorTexture") : null;
+            if (bright.HasProperty("emissiveTexture") && tex != null) bright.SetTexture("emissiveTexture", tex);
+            if (bright.HasProperty("emissiveFactor")) bright.SetColor("emissiveFactor", new Color(0.95f, 0.72f, 0.3f));
+            if (bright.HasProperty("roughnessFactor")) bright.SetFloat("roughnessFactor", 0.28f);
+            bright.EnableKeyword("_EMISSION");
+            bright.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            EditorUtility.SetDirty(bright);
+            return bright;
+        }
         ModelPrefabUtil.EnsureFolder("Assets/Materials/FX");
         const string path = "Assets/Materials/FX/FxCoin.mat";
         var m = AssetDatabase.LoadAssetAtPath<Material>(path);

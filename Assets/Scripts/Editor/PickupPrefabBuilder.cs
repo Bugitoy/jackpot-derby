@@ -157,6 +157,21 @@ public static class PickupPrefabBuilder
         return m;
     }
 
+    // The Bad Luck Storm is a dark, dusty-yellow sandstorm.
+    static Material StormWallMaterial() => MistMaterial("StormMistWall", false, new Color(0.55f, 0.44f, 0.22f), new Color(0.24f, 0.17f, 0.07f), 0.8f);
+    static Material StormGroundMaterial() => MistMaterial("StormMistGround", true, new Color(0.26f, 0.19f, 0.08f), new Color(0.12f, 0.08f, 0.03f), 0.55f);
+
+    /// <summary>Re-colours the existing storm materials and in-storm grade without rebuilding the pickups.</summary>
+    [MenuItem("Jackpot Derby/Apply Storm Look")]
+    public static void ApplyStormLook()
+    {
+        StormWallMaterial();
+        StormGroundMaterial();
+        LookSetup.BuildStormVolume();
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Storm] Sandstorm look applied.");
+    }
+
     /// <summary>Material on the storm mist shader (wall curtain or ground darkening).</summary>
     static Material MistMaterial(string name, bool ground, Color light, Color deep, float maxAlpha)
     {
@@ -196,10 +211,8 @@ public static class PickupPrefabBuilder
         var storm = stormGo.GetComponent<StormController>();
         if (storm == null) storm = stormGo.AddComponent<StormController>();
         ModelPrefabUtil.SetField(storm, "grid", Object.FindAnyObjectByType<ArenaGrid>());
-        ModelPrefabUtil.SetField(storm, "wallMaterial", MistMaterial("StormMistWall", false,
-            new Color(0.40f, 0.36f, 0.52f), new Color(0.17f, 0.15f, 0.25f), 0.8f));
-        ModelPrefabUtil.SetField(storm, "groundMaterial", MistMaterial("StormMistGround", true,
-            new Color(0.16f, 0.15f, 0.23f), new Color(0.08f, 0.08f, 0.13f), 0.55f));
+        ModelPrefabUtil.SetField(storm, "wallMaterial", StormWallMaterial());
+        ModelPrefabUtil.SetField(storm, "groundMaterial", StormGroundMaterial());
         var vg = GameObject.Find("StormVolume");
         if (vg != null) ModelPrefabUtil.SetField(storm, "stormVolume", vg.GetComponent<UnityEngine.Rendering.Volume>());
         ModelPrefabUtil.SetField(storm, "cloudMaterial", CombatAssetBuilder.ParticleMaterial("FxPuff", false));

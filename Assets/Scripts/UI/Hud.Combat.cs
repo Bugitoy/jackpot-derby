@@ -31,11 +31,13 @@ public partial class Hud
     // Abilities
     Image turboFill, turboBack, turboTip, turboTipGlow, turboHub, turboHubGlow, turboSpill;
     TextMeshProUGUI turboLabel;
-    float turboRadius, hubSpin;
+    float turboRadius;
     TextMeshProUGUI turboKey;
     Image stormBanner;
     static readonly Color StormInk = new Color(0.2f, 0.12f, 0.06f);
     static readonly Color TurboOrange = new Color(1f, 0.55f, 0.15f);
+    static readonly Color TurboBlue = new Color(0.3f, 0.85f, 1f);
+    static readonly Color StormDust = new Color(0.24f, 0.16f, 0.05f);
 
     // Floating bar over each car: one bar, only while it's being hit, showing its outermost layer
     // (Jackpot cannon bar -> small blaster bar -> car health).
@@ -47,6 +49,8 @@ public partial class Hud
         public Image fillImg;
         public CanvasGroup group;
         public TextMeshProUGUI label;
+        public SpriteText name;
+        public bool isPlayer;
         public CarHealth health;
         public CarLoadout loadout;
         public float sinceHit = 99f;
@@ -56,7 +60,10 @@ public partial class Hud
     readonly Dictionary<CarHealth, WorldBar> worldBars = new Dictionary<CarHealth, WorldBar>();
 
     // Small odometer number floating over each AI car (gold when locked).
-    class FloatingNumber { public RectTransform root; public Image back; public TextMeshProUGUI text; public Odometer odo; public CarHealth health; public DiceLuck luck; public Image[] pips; }
+    // Over each AI car: its colour number plate (Docs/NPC_Naming art) with its live number in painted digits.
+    class FloatingNumber { public RectTransform root; public Image back; public SpriteText digits; public Color tint; public Odometer odo; public CarHealth health; public DiceLuck luck; public Image[] pips; }
+    const float PlateHeight = 36f, PlateLift = 36f;      // plate size and how far above the car's roof point
+    static readonly Vector2 BarFrameSize = new Vector2(108f, 25f);
     readonly List<FloatingNumber> floatingNumbers = new List<FloatingNumber>();
     readonly HashSet<CarIdentity> floatingFor = new HashSet<CarIdentity>();
     RectTransform worldBarLayer, damageLayer;
@@ -147,10 +154,10 @@ public partial class Hud
         stormBanner = UIKit.ArtImage(canvasRect, "storm_banner", new Vector2(0.5f, 1f), new Vector2(0f, -112f), 38f, 290f);
         stormText = UIKit.Label(stormBanner.rectTransform, "", 15f, StormInk, UIWeight.ExtraBold);
         Anchor(stormText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(17f, 1f), new Vector2(240f, 30f));
-        stormOverlay = NewImage("StormOverlay", canvasRect, UISprites.Vignette, new Color(0.12f, 0.10f, 0.20f, 0f));
+        stormOverlay = NewImage("StormOverlay", canvasRect, UISprites.Vignette, new Color(StormDust.r, StormDust.g, StormDust.b, 0f));
         Stretch(stormOverlay.rectTransform);
         stormOverlay.rectTransform.SetSiblingIndex(0);
-        stormWarning = NewText("StormWarning", canvasRect, "GET OUT OF THE STORM!", 34, new Color(0.9f, 0.6f, 1f));
+        stormWarning = NewText("StormWarning", canvasRect, "GET OUT OF THE STORM!", 34, new Color(1f, 0.78f, 0.35f));
         stormWarning.fontStyle = FontStyles.Bold;
         Anchor(stormWarning.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 90f), new Vector2(800f, 44f));
         Outline(stormWarning);
@@ -225,9 +232,10 @@ public partial class Hud
         turboTip.rectTransform.sizeDelta = new Vector2(size * 0.08f, size * 0.3f);
 
         // Cyan ring of light round the hub, and the TURBO lettering glowing inside it.
-        turboHubGlow = NewImage("TurboHubGlow", dial, UISprites.Glow, new Color(0.3f, 0.9f, 1f, 0.35f));
+        turboHubGlow = NewImage("TurboHubGlow", dial, UISprites.Glow, new Color(TurboBlue.r, TurboBlue.g, TurboBlue.b, 0.3f));
         Anchor(turboHubGlow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.02f), Vector2.one * size * 0.62f);
-        turboHub = NewImage("TurboHubRing", dial, UISprites.HubRing, new Color(0.35f, 0.95f, 1f, 1f));
+        // One solid, still blue ring (a spinning comet ring confused players).
+        turboHub = NewImage("TurboHubRing", dial, UISprites.Ring, TurboBlue);
         Anchor(turboHub.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.02f), Vector2.one * size * 0.5f);
         turboLabel = UIKit.Label(dial, "TURBO", size * 0.1f, new Color(0.82f, 1f, 1f), UIWeight.SemiBold);
         turboLabel.characterSpacing = 2f;
@@ -345,7 +353,7 @@ public partial class Hud
         if (d.kind == DamageKind.Ram || d.kind == DamageKind.Blast) c = victimIsPlayer ? HpRed : GoldBar;
         float size = d.kind == DamageKind.Ram || d.kind == DamageKind.Blast ? 40f : 30f;
         SpawnDamageNumber(d.point + Vector3.up * 1.5f, Mathf.CeilToInt(d.amount).ToString(), c, size);
-        if (d.kind == DamageKind.Storm) c = new Color(0.8f, 0.5f, 1f);
+        if (d.kind == DamageKind.Storm) c = new Color(1f, 0.75f, 0.3f);
         if (victimIsPlayer && d.kind != DamageKind.Storm) CameraShake.Add(Mathf.Clamp(0.18f + d.amount / 50f, 0f, 0.6f));
         else if (attackerIsPlayer) CameraShake.Add(d.kind == DamageKind.Blaster ? 0.05f : 0.25f);
     }
@@ -444,7 +452,7 @@ public partial class Hud
         bool outside = pHealth != null && pHealth.IsAlive && !storm.IsInside(player.transform.position, 0f);
         // A soft dark vignette; the StormVolume (faded by StormController) does the desaturation.
         stormOverlayAlpha = Mathf.MoveTowards(stormOverlayAlpha, outside ? 0.45f : 0f, dt * 1.2f);
-        stormOverlay.color = new Color(0.12f, 0.10f, 0.20f, stormOverlayAlpha);
+        stormOverlay.color = new Color(StormDust.r, StormDust.g, StormDust.b, stormOverlayAlpha);
         stormWarning.gameObject.SetActive(outside);
         if (outside) stormWarning.alpha = 0.6f + 0.4f * Mathf.Sin(Time.time * 7f);
     }
@@ -499,13 +507,7 @@ public partial class Hud
                 turboTipGlow.color = new Color(1f, 0.85f, 0.4f, 0.5f + 0.15f * Mathf.Sin(t * 9f));
             }
 
-            // Cyan hub ring: idles slowly while recharging, turns when ready, whirls while active.
-            hubSpin += dt * (active ? 720f : ready ? 120f : 30f);
-            turboHub.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -hubSpin);
-            float hubA = active ? 1f : ready ? 0.85f + 0.15f * Mathf.Sin(t * 5f) : 0.35f;
-            turboHub.color = new Color(0.35f, 0.95f, 1f, hubA);
-            turboHubGlow.color = new Color(0.3f, 0.9f, 1f, hubA * 0.4f);
-            turboLabel.color = new Color(0.82f, 1f, 1f, 0.55f + 0.45f * hubA);
+            // The blue hub ring stays one solid, still colour (set once when built).
         }
     }
 
@@ -528,11 +530,10 @@ public partial class Hud
             bool show = alive && vp.z > 0f && vp.x > -0.05f && vp.x < 1.05f && vp.y > -0.05f && vp.y < 1.05f;
             fnum.root.gameObject.SetActive(show);
             if (!show) continue;
-            fnum.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y + 42f);
+            fnum.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y + PlateLift);
             bool locked = fnum.odo.IsLocked;
-            fnum.text.text = fnum.odo.Number.ToString("00");
-            fnum.back.color = locked ? reelLockedColor : new Color(0.08f, 0.12f, 0.14f, 0.9f);
-            fnum.text.color = locked ? digitColor : reelColor;
+            fnum.digits.SetText(fnum.odo.Number.ToString());
+            fnum.digits.Color = locked ? new Color(1f, 0.84f, 0.32f) : fnum.tint;
             int stacks = fnum.luck != null ? fnum.luck.Stacks : 0;
             for (int i = 0; i < fnum.pips.Length; i++) fnum.pips[i].enabled = i < stacks;
         }
@@ -548,7 +549,8 @@ public partial class Hud
             bool visible = vp.z > 0f && vp.x > -0.05f && vp.x < 1.05f && vp.y > -0.05f && vp.y < 1.05f;
             b.root.gameObject.SetActive(visible);
             if (!visible) continue;
-            b.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y);
+            // AI: above the number plate. Player (no plate): just over the roof.
+            b.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y + (b.isPlayer ? 30f : PlateLift + PlateHeight * 0.5f + 22f));
             b.group.alpha = alpha;
 
             float hp = b.health.Health / b.health.MaxHealth;
@@ -563,21 +565,21 @@ public partial class Hud
     FloatingNumber MakeFloatingNumber(CarIdentity id, CarHealth h)
     {
         var f = new FloatingNumber { health = h, odo = id.GetComponent<Odometer>(), luck = DiceLuck.For(id.gameObject) };
-        f.root = NewRect("Number_" + id.displayName, worldBarLayer, Vector2.zero, new Vector2(44f, 26f));
+        var plate = UIKit.Art(PlateFor(id));
+        float plateW = plate != null ? PlateHeight * plate.rect.width / plate.rect.height : PlateHeight * 1.6f;
+        f.root = NewRect("Number_" + id.displayName, worldBarLayer, Vector2.zero, new Vector2(plateW, PlateHeight));
         f.root.anchorMin = f.root.anchorMax = Vector2.zero;
-        f.back = NewImage("Back", f.root, UISprites.RoundedRect, Color.black);
+        f.back = NewImage("Plate", f.root, plate, Color.white);
         Stretch(f.back.rectTransform);
-        var edge = NewImage("Edge", f.root, UISprites.RoundedRect, id.color);
-        Anchor(edge.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 1.5f), new Vector2(36f, 3f));
-        f.text = NewText("Value", f.root, "00", 20, Color.white);
-        f.text.fontStyle = FontStyles.Bold;
-        Stretch(f.text.rectTransform);
+        // Pale digits tinted toward the car's colour, as on the painted example plates.
+        f.tint = Color.Lerp(id.color, new Color(0.98f, 0.95f, 0.86f), 0.68f);
+        f.digits = SpriteText.Create(f.root, "Digits", PlateHeight * 0.5f, f.tint, new Vector2(0f, PlateHeight * 0.08f));
         // Little gold dots under the number: how much dice luck this car is holding.
         f.pips = new Image[DiceLuck.MaxStacks];
         for (int i = 0; i < f.pips.Length; i++)
         {
             f.pips[i] = NewImage("LuckDot" + i, f.root, UISprites.Circle, GoldBar);
-            Anchor(f.pips[i].rectTransform, new Vector2(0.5f, 0f), new Vector2(-16f + i * 8f, -6f), new Vector2(6f, 6f));
+            Anchor(f.pips[i].rectTransform, new Vector2(0.5f, 0f), new Vector2(-16f + i * 8f, -5f), new Vector2(6f, 6f));
         }
         f.root.gameObject.SetActive(false);
         return f;
@@ -592,13 +594,37 @@ public partial class Hud
         b.group.blocksRaycasts = false;
         b.group.interactable = false;
         b.shownLayer = b.loadout != null ? b.loadout.Tier : BlasterTier.None;
-        b.label = NewText("Name", b.root, id.isPlayer ? "YOU" : id.displayName.ToUpper(), 13, id.color);
-        b.label.fontStyle = FontStyles.Bold;
-        Anchor(b.label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 18f), new Vector2(160f, 18f));
-        Outline(b.label);
-        MakeBar(b.root, Vector2.zero, new Vector2(88f, 16f), HpGreen, out b.fill, out b.fillImg);
+        b.isPlayer = id.isPlayer;
+        // Name in the painted letters, in the car's colour.
+        b.name = SpriteText.Create(b.root, "Name", 15f, Color.Lerp(id.color, Color.white, 0.12f), new Vector2(0f, BarFrameSize.y * 0.5f + 11f));
+        b.name.SetText(id.isPlayer ? "YOU" : id.displayName);
+        // The rusty frame; the health fill runs in its dark slot.
+        var frame = UIKit.ArtImage(b.root, "npc_bar_frame", new Vector2(0.5f, 0.5f), Vector2.zero, BarFrameSize.y, BarFrameSize.x);
+        var slot = NewRect("Slot", frame.rectTransform, Vector2.zero, Vector2.zero);
+        Anchor(slot, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.4f), new Vector2(BarFrameSize.x * 0.86f, BarFrameSize.y * 0.42f));
+        b.fillImg = NewImage("Fill", slot, UISprites.RoundedRect, HpGreen);
+        b.fillImg.pixelsPerUnitMultiplier = 4f;
+        b.fill = b.fillImg.rectTransform;
+        b.fill.anchorMin = Vector2.zero; b.fill.anchorMax = Vector2.one;
+        b.fill.pivot = new Vector2(0f, 0.5f);
+        b.fill.offsetMin = b.fill.offsetMax = Vector2.zero;
+        var gloss = NewImage("Gloss", b.fill, null, new Color(1f, 1f, 1f, 0.3f));
+        gloss.rectTransform.anchorMin = new Vector2(0f, 0.55f);
+        gloss.rectTransform.anchorMax = new Vector2(1f, 0.88f);
+        gloss.rectTransform.offsetMin = new Vector2(3f, 0f);
+        gloss.rectTransform.offsetMax = new Vector2(-3f, 0f);
         b.root.gameObject.SetActive(false);
         return b;
+    }
+
+    /// <summary>Which painted number plate a car carries (by its colour scheme).</summary>
+    static string PlateFor(CarIdentity id)
+    {
+        string n = id.displayName.ToLowerInvariant();
+        if (n.Contains("cat")) return "npc_plate_purple";
+        if (n.Contains("dice")) return "npc_plate_orange";
+        if (n.Contains("8")) return "npc_plate_red";
+        return "npc_plate_green";
     }
 
     static Color HpColor(float f) => f > 0.5f ? Color.Lerp(HpYellow, HpGreen, (f - 0.5f) * 2f) : Color.Lerp(HpRed, HpYellow, f * 2f);

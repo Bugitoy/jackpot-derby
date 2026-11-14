@@ -44,7 +44,7 @@ public class AIBrain : MonoBehaviour
     // Number game for the current chest.
     Chest chest, searchChest;
     ChestPhase phase;
-    int lo = 1, hi = 99;
+    int lo = Odometer.Min, hi = Odometer.Max;
     float phaseTimer, adjustGoal, adjustStart, misjudge, orbitAngle, unlockTravelMark;
     readonly Dictionary<Chest, bool> wantsChest = new Dictionary<Chest, bool>();
 
@@ -446,7 +446,7 @@ public class AIBrain : MonoBehaviour
     void ResetSearch(Chest c)
     {
         searchChest = c;
-        lo = 1; hi = 99;
+        lo = Odometer.Min; hi = Odometer.Max;
         phase = ChestPhase.Approach;
         unlockTravelMark = driver.Travelled;
         if (odo.IsLocked && Random.value < 0.5f) odo.Unlock();
@@ -462,7 +462,7 @@ public class AIBrain : MonoBehaviour
         bool readsWay = hint.way && Random.value < 0.4f + personality.numberSkill * 0.6f;
         if (hint.kind == HintKind.TooHigh) hi = Mathf.Min(hi, n - (readsWay ? HintResult.WayRange + 1 : HintResult.CloseRange + 1));
         else lo = Mathf.Max(lo, n + (readsWay ? HintResult.WayRange + 1 : HintResult.CloseRange + 1));
-        if (lo > hi) { lo = 1; hi = 99; }
+        if (lo > hi) { lo = Odometer.Min; hi = Odometer.Max; }
 
         phase = ChestPhase.Thinking;
         phaseTimer = Random.Range(personality.hintPause.x, personality.hintPause.y);
@@ -473,7 +473,7 @@ public class AIBrain : MonoBehaviour
         int n = odo.Number;
         int desired = (lo + hi) / 2;
         if (Random.value > personality.numberSkill) desired += Random.Range(-10, 11);  // a sloppy guess
-        desired = Mathf.Clamp(desired, 1, 99);
+        desired = Mathf.Clamp(desired, Odometer.Min, Odometer.Max);
         if (desired == n) desired = Odometer.Wrap(n + (Random.value < 0.5f ? 3 : -3));
         int delta = desired - n;
 
@@ -488,7 +488,7 @@ public class AIBrain : MonoBehaviour
         }
         else
         {
-            int steps = delta > 0 ? delta : delta + 99;   // counting forward wraps 99 -> 1
+            int steps = delta > 0 ? delta : delta + Odometer.Count;   // counting forward wraps 100 -> 1
             phase = ChestPhase.Adjusting;
             adjustGoal = steps * 3f + 1.5f;
         }

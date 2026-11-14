@@ -16,6 +16,11 @@ public class Pickup : MonoBehaviour
     /// <summary>(pickup, car that grabbed it, message for the popup)</summary>
     public static event Action<Pickup, GameObject, string> AnyCollected;
 
+    // This project enters Play mode without reloading scripts, so static events and lists would keep
+    // the previous session's destroyed objects (whose handlers then throw). Start every session clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { AnyCollected = null; Active.Clear(); }
+
     [SerializeField] PickupKind kind;
     [SerializeField] float cloverHeal = 30f;
     [SerializeField] Transform visual;

@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// The Bad Luck Storm. The safe zone starts as the whole arena; from 60 s it shrinks every 30 s toward a
 /// point near the centre, down to about 30×20 units by ~4 minutes. Outside it: 5 damage per second,
-/// dark purple clouds and walls. Other systems ask IsInside / ClosestSafePoint.
+/// dark, dusty-yellow sandstorm clouds and walls. Other systems ask IsInside / ClosestSafePoint.
 /// </summary>
 public class StormController : MonoBehaviour
 {
@@ -149,9 +149,9 @@ public class StormController : MonoBehaviour
             darkGround[i] = g.transform;
 
             clouds[i] = MakeClouds("StormClouds" + i, new Vector2(12f, 20f), new Vector2(6f, 9f), 110,
-                new Color(0.42f, 0.40f, 0.50f, 0.5f), new Color(0.20f, 0.19f, 0.27f, 0.55f));
+                new Color(0.55f, 0.44f, 0.24f, 0.5f), new Color(0.30f, 0.22f, 0.10f, 0.55f));   // dark sand
             mist[i] = MakeClouds("StormGroundMist" + i, new Vector2(6f, 10f), new Vector2(5f, 8f), 80,
-                new Color(0.55f, 0.53f, 0.62f, 0.32f), new Color(0.36f, 0.34f, 0.44f, 0.36f));
+                new Color(0.66f, 0.54f, 0.32f, 0.32f), new Color(0.45f, 0.35f, 0.18f, 0.36f));  // drifting dust
         }
     }
 

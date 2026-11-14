@@ -33,6 +33,11 @@ public class CarHealth : MonoBehaviour
     /// <summary>All cars still in the match.</summary>
     public static readonly List<CarHealth> Alive = new List<CarHealth>();
 
+    // This project enters Play mode without reloading scripts, so static events and lists would keep
+    // the previous session's destroyed objects (whose handlers then throw). Start every session clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { AnyDamaged = null; AnyEliminated = null; Alive.Clear(); }
+
     CarLoadout loadout;
 
     void Awake()

@@ -227,10 +227,10 @@ public partial class Hud : MonoBehaviour
 
     void UpdateReels()
     {
-        // Keep the roll continuous when the number wraps 99 <-> 1.
+        // Keep the roll continuous when the number wraps 100 <-> 1 (rolls through 000 / 101 briefly).
         int n = odometer.Number;
-        if (lastNumber == 99 && n == 1) shownValue -= 99f;
-        else if (lastNumber == 1 && n == 99) shownValue += 99f;
+        if (lastNumber == Odometer.Max && n == Odometer.Min) shownValue -= Odometer.Count;
+        else if (lastNumber == Odometer.Min && n == Odometer.Max) shownValue += Odometer.Count;
         lastNumber = n;
 
         float ones, tens, hundreds = 0f;
@@ -240,8 +240,8 @@ public partial class Hud : MonoBehaviour
             spinAge += Time.deltaTime;
             float tH = Mathf.Clamp01(spinAge / (spinDur * 0.45f));
             float tT = Mathf.Clamp01(spinAge / (spinDur * 0.7f)), tO = Mathf.Clamp01(spinAge / spinDur);
-            int tensTo = spinTo / 10, onesTo = spinTo % 10;
-            hundreds = Mathf.Repeat(Mathf.LerpUnclamped(-10f, 0f, EaseOutBack(tH)), 10f);
+            int hundredsTo = spinTo / 100, tensTo = (spinTo / 10) % 10, onesTo = spinTo % 10;
+            hundreds = Mathf.Repeat(Mathf.LerpUnclamped(hundredsTo - 10f, hundredsTo, EaseOutBack(tH)), 10f);
             tens = Mathf.Repeat(Mathf.LerpUnclamped(tensTo - 20f, tensTo, EaseOutBack(tT)), 10f);
             ones = Mathf.Repeat(Mathf.LerpUnclamped(onesTo - 30f, onesTo, EaseOutBack(tO)), 10f);
             if (tT >= 1f && tO < 1f && spinAge - Time.deltaTime < spinDur * 0.7f) lockPunch = 0.6f;
@@ -252,9 +252,13 @@ public partial class Hud : MonoBehaviour
         {
             float target = n + odometer.Progress;
             shownValue = Mathf.Lerp(shownValue, target, 1f - Mathf.Exp(-14f * Time.deltaTime));
-            float v = Mathf.Repeat(shownValue, 100f);
+            // Three reels with odometer carries: each reel turns over as the one to its right goes 9 -> 0.
+            float v = Mathf.Repeat(Mathf.Max(0f, shownValue), 1000f);
             ones = Mathf.Repeat(v, 10f);
-            tens = Mathf.Floor(v / 10f) + Mathf.Clamp01(ones - 9f);
+            float carry = Mathf.Clamp01(ones - 9f);
+            float tensWhole = Mathf.Repeat(Mathf.Floor(v / 10f), 10f);
+            tens = tensWhole + carry;
+            hundreds = Mathf.Repeat(Mathf.Floor(v / 100f), 10f) + (tensWhole >= 9f ? carry : 0f);
         }
         onesColumn.anchoredPosition = new Vector2(0f, ones * DigitH);
         tensColumn.anchoredPosition = new Vector2(0f, tens * DigitH);

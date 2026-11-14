@@ -33,7 +33,7 @@ Material:
     - _ScrollSpeed: 0.6
     - _SoftDepth: 2
     m_Colors:
-    - _Color: {r: 0.4, g: 0.36, b: 0.52, a: 1}
-    - _DeepColor: {r: 0.17, g: 0.15, b: 0.25, a: 1}
+    - _Color: {r: 0.55, g: 0.44, b: 0.22, a: 1}
+    - _DeepColor: {r: 0.24, g: 0.17, b: 0.07, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

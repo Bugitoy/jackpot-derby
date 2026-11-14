@@ -7,8 +7,8 @@ Shader "JackpotDerby/StormMist"
 {
     Properties
     {
-        _Color ("Mist Colour", Color) = (0.38, 0.34, 0.50, 1)
-        _DeepColor ("Deep Colour", Color) = (0.16, 0.14, 0.24, 1)
+        _Color ("Mist Colour", Color) = (0.55, 0.44, 0.22, 1)
+        _DeepColor ("Deep Colour", Color) = (0.24, 0.17, 0.07, 1)
         _MaxAlpha ("Max Alpha", Range(0, 1)) = 0.4
         _NoiseScale ("Noise Scale", Float) = 0.08
         _ScrollSpeed ("Scroll Speed", Float) = 0.6

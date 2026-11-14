@@ -316,7 +316,7 @@ public class Menus : MonoBehaviour
         var vol = UIKit.ArtImage(r, "steel_plate", new Vector2(0f, 0f), new Vector2(160f, 58f), 104f, 292f);
         AddVolumeSliders(vol.rectTransform, new Vector2(0f, 19f), new Vector2(0f, -19f), 74f, 172f, 21f);
 
-        var credit = UIKit.Label(r, "Unity Game Jam 2026  •  theme: Lucky Number", 16f, Color.white, UIWeight.SemiBold, true);
+        var credit = UIKit.Label(r, "Unity Game Jam 2026  •  Theme: Lucky Number", 16f, Color.white, UIWeight.SemiBold, true);
         credit.alignment = TextAlignmentOptions.Right;
         Hud.Anchor(credit.rectTransform, new Vector2(1f, 0f), new Vector2(-268f, 28f), new Vector2(520f, 24f));
     }
@@ -340,13 +340,13 @@ public class Menus : MonoBehaviour
         Card(grid, 0, 0, carModel, blue, blue, "DRIVE",
              "<b>W A S D</b> or <b>arrow keys</b> to drive, brake, reverse and steer. <b>SHIFT</b> = Turbo: more speed and fire rate.");
         Card(grid, 1, 0, null, orange, UIKit.Gold, "YOUR NUMBER",
-             "Your number (1-99) rolls <b>up</b> as you drive forward and <b>down</b> in reverse. <b>Stop</b> to lock it and get a hint: TOO HIGH, TOO LOW, CLOSE or LUCKY! <b>R</b> unlocks it.", true);
+             "Your number (1-100) rolls <b>up</b> as you drive forward and <b>down</b> in reverse. <b>Stop</b> to lock it and get a hint: TOO HIGH, TOO LOW, CLOSE or LUCKY! <b>R</b> unlocks it.", true);
         Card(grid, 2, 0, chestModel, yellow, UIKit.Gold, "CHESTS",
              "Each chest hides a number. <b>Ram it</b> with a number within 5 of it to crack it open. Too far off and you bounce. Spot on = <b>LUCKY!</b> and a full repair.");
         Card(grid, 0, 1, blasterModel, blue, blue, "BLASTERS",
              "Chests upgrade your cannon: <b>Small Blaster</b>, then the <b>Jackpot Cannon</b>. They fire by themselves at the nearest enemy in range.");
         Card(grid, 1, 1, cloverModel, green, green, "LUCK",
-             "Each <b>Dice</b> raises your odds of rolling a chest's exact number. <b>Black cats</b> wipe it! <b>Clovers</b> repair you. Avoid the purple <b>Storm</b>.");
+             "Each <b>Dice</b> raises your odds of rolling a chest's exact number. <b>Black cats</b> wipe it! <b>Clovers</b> repair you. Avoid the <b>Sandstorm</b>.");
         Card(grid, 2, 1, trophyModel, red, red, "LAST CAR STANDING",
              "Blast and ram the other three cars. Side and rear rams hit hardest. Unarmed? Run, hide and hunt for chests. <b>Last car alive wins!</b>");
 

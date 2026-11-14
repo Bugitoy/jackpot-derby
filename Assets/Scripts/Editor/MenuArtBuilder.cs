@@ -35,26 +35,27 @@ public static class MenuArtBuilder
         var log = new System.Text.StringBuilder("[MenuArt] ");
 
         // Single pieces (everything opaque in the file is one piece).
-        Single("r7bpb57d1drmr0d1v1vv23e43m", new Piece("logo"), log);
-        Single("37hm2eq7f1rmw0d1v1tr8kvdtg", new Piece("board"), log);
-        Single("dqe4h1w785rmt0d1v1t81b93f8", new Piece("card", 0.16f), log);
-        Single("qvseaqy1jhrmr0d1v1wa8k9pjm", new Piece("steel_plate", 0.42f, 0.36f), log);
-        Single("m8snqnz16hrmr0d1v1ta7rbxvc", new Piece("hp_frame"), log);
+        Single("logo_jackpot_derby.png", new Piece("logo"), log);
+        Single("pause_board_ivy.png", new Piece("board"), log);
+        Single("metal_card.png", new Piece("card", 0.16f), log);
+        Single("steel_plate.png", new Piece("steel_plate", 0.42f, 0.36f), log);
+        Single("hp_frame.png", new Piece("hp_frame"), log);
         // Warning sign on the left stays square; the paper stretches.
-        Single("6e328jek71rmw0d1v1va2t5za4", new Piece("storm_banner", new Vector4(0.9f, 0.12f, 0.3f, 0.12f)), log);
-        Single("a4ce27sfm9rmt0d1v1t9t8vfcg", new Piece("turbo_dial"), log);
+        Single("storm_warning_banner.png", new Piece("storm_banner", new Vector4(0.9f, 0.12f, 0.3f, 0.12f)), log);
+        Single("turbo_dial.png", new Piece("turbo_dial"), log);
 
         // Sheets with several pieces, named in reading order (rows top to bottom, then left to right).
-        Sheet("d71az8svqhrmy0d1v1ts2peqj8", log, ByRows, new Piece("btn_yellow", 0.4f), new Piece("btn_teal", 0.4f), new Piece("btn_slate", 0.4f), new Piece("btn_cream", 0.4f));
-        Sheet("pe5j7vs2m5rmr0d1v1vvzpz280", log, ByColumnsThenRows, new Piece("btn_yellow_big", 0.4f), new Piece("btn_teal_big", 0.4f), new Piece("plaque"));
-        Sheet("txddjex2wxrmr0d1v1ttx1y9tw", log, ByColumns, new Piece("slider_track_cap", 0.5f), new Piece("slider_knob"), new Piece("slider_track", 0.5f));
-        Sheet("xxs6z0jh75rmw0d1v1v9gywhn4", log, ByColumns, new Piece("storm_banner_plate"), new Piece("timer_screen", 0.3f));
+        Sheet("buttons_pause_sheet.png", log, ByRows, new Piece("btn_yellow", 0.4f), new Piece("btn_teal", 0.4f), new Piece("btn_slate", 0.4f), new Piece("btn_cream", 0.4f));
+        Sheet("buttons_title_sheet.png", log, ByColumnsThenRows, new Piece("btn_yellow_big", 0.4f), new Piece("btn_teal_big", 0.4f), new Piece("plaque"));
+        Sheet("slider_parts_sheet.png", log, ByColumns, new Piece("slider_track_cap", 0.5f), new Piece("slider_knob"), new Piece("slider_track", 0.5f));
+        Sheet("storm_banner_and_timer_sheet.png", log, ByColumns, new Piece("storm_banner_plate"), new Piece("timer_screen", 0.3f));
 
         // The odometer: the frame, and the padlock body cut free so it can swing and light up.
         Odometer(log);
+        BuildNpcArt(log);
 
         AssetDatabase.Refresh();
-        foreach (var f in Directory.GetFiles(OutDir, "*.png")) ConfigureSprite(f.Replace('\\', '/'));
+        foreach (var f in Directory.GetFiles(OutDir, "*.png", SearchOption.AllDirectories)) ConfigureSprite(f.Replace('\\', '/'));
         BuildFonts(log);
         AssetDatabase.SaveAssets();
         Debug.Log(log.ToString());
@@ -64,7 +65,7 @@ public static class MenuArtBuilder
 
     static Texture2D Load(string file)
     {
-        var path = Path.Combine(SourceDir, file + "_preview_0-ezremove.png");
+        var path = file.Contains("/") ? file : Path.Combine(SourceDir, file);
         var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
         tex.LoadImage(File.ReadAllBytes(path));
         return tex;
@@ -156,7 +157,7 @@ public static class MenuArtBuilder
 
     static void Odometer(System.Text.StringBuilder log)
     {
-        var tex = Load("01m2x82fqnrmt0d1v1sv0bc6x8");
+        var tex = Load("odometer_frame.png");
         int h = tex.height;
         // Padlock body in image coordinates (y down): x 1250-1425, y 712-885. Texture y is up.
         var lockRect = new RectInt(1250, h - 885, 175, 885 - 712);
@@ -217,6 +218,145 @@ public static class MenuArtBuilder
         string name = Path.GetFileNameWithoutExtension(path);
         if (borders.TryGetValue(name, out var b)) imp.spriteBorder = b;
         imp.SaveAndReimport();
+    }
+
+    // ---------------- NPC plates, name letters and health bar (Docs/NPC_Naming) ----------------
+
+    const string NpcDir = "Docs/NPC_Naming";
+    const string GlyphDir = OutDir + "/Glyphs";
+
+    /// <summary>
+    /// The art over each car: the four oval number plates, the rusty health bar frame, and textured
+    /// letters/digits converted to light grey (grain and shading kept) so they can be tinted to any car
+    /// colour. The orange letter set is the only complete A-Z; the digit art has no 0, so 0 is the
+    /// letter O narrowed to digit width.
+    /// </summary>
+    static void BuildNpcArt(System.Text.StringBuilder log)
+    {
+        Directory.CreateDirectory(GlyphDir);
+
+        // Plates: purple, orange, red, green from top to bottom (each with its painted underline).
+        var plates = Load(NpcDir + "/npc_number_plates_sheet.png");
+        var pl = Islands(plates, 200, 8);
+        ByRows(pl);
+        string[] plateNames = { "npc_plate_purple", "npc_plate_orange", "npc_plate_red", "npc_plate_green" };
+        if (pl.Count != 4) log.Append($"[plates: found {pl.Count}, expected 4] ");
+        for (int i = 0; i < 4 && i < pl.Count; i++) Save(plates, pl[i], new Piece(plateNames[i]), log, null);
+        Object.DestroyImmediate(plates);
+
+        // Health bar frame: cut out of the JPG with rounded corners (its checkerboard was painted in).
+        var bar = Load(NpcDir + "/npc_health_bar_frame.jpg");
+        var barRect = new RectInt(229, bar.height - 1021, 2302, 1021 - 483);   // just inside the painted edge
+        SaveRounded(bar, barRect, 34f, "npc_bar_frame", log);
+        Object.DestroyImmediate(bar);
+
+        // Letters A-Z from the orange set (rows 4-6 of the sheet).
+        var letters = Load(NpcDir + "/npc_letters_sheet.png");
+        var lg = GlyphsInBand(letters, 390, 745);
+        if (lg.Count != 26) log.Append($"[letters: found {lg.Count}, expected 26] ");
+        for (int i = 0; i < 26 && i < lg.Count; i++) SaveGlyph(letters, lg[i], ((char)('A' + i)).ToString(), 1f);
+
+        // Digits 1-9 from the purple set (rows 1-2: 1 2 3 4 5 6 / 7 7 8 9).
+        var digits = Load(NpcDir + "/npc_digits_sheet.png");
+        var dg = GlyphsInBand(digits, 20, 430);
+        string[] digitNames = { "1", "2", "3", "4", "5", "6", "7", null, "8", "9" };
+        if (dg.Count != digitNames.Length) log.Append($"[digits: found {dg.Count}, expected {digitNames.Length}] ");
+        float digitAspect = 0f; int nDigits = 0;
+        for (int i = 0; i < digitNames.Length && i < dg.Count; i++)
+        {
+            if (digitNames[i] == null) continue;
+            SaveGlyph(digits, dg[i], digitNames[i], 1f);
+            if (digitNames[i] != "1") { digitAspect += (float)dg[i].width / dg[i].height; nDigits++; }
+        }
+        // 0 = the letter O squeezed to a digit's proportions (the art has no zero). Glyphs are drawn
+        // at a common height, so matching the width-to-height ratio is what counts.
+        if (lg.Count >= 15 && nDigits > 0)
+        {
+            var o = lg[14];
+            float target = digitAspect / nDigits * 0.92f;
+            SaveGlyph(letters, o, "0", Mathf.Clamp(target / ((float)o.width / o.height), 0.4f, 1f));
+        }
+        Object.DestroyImmediate(letters);
+        Object.DestroyImmediate(digits);
+        log.Append($"npc art: {pl.Count} plates, bar frame, {lg.Count} letters, {dg.Count} digit pieces ");
+    }
+
+    /// <summary>Glyph islands whose centre lies in a band of image rows (y down), in reading order.</summary>
+    static List<RectInt> GlyphsInBand(Texture2D tex, int yTop, int yBottom)
+    {
+        var all = Islands(tex, 300, 2);
+        var band = new List<RectInt>();
+        foreach (var r in all)
+        {
+            float cy = tex.height - r.center.y;            // to image rows, y down
+            if (cy >= yTop && cy <= yBottom) band.Add(r);
+        }
+        // Rows: cluster by centre height, then left to right.
+        band.Sort((a, b) => b.center.y.CompareTo(a.center.y));
+        var rows = new List<List<RectInt>>();
+        foreach (var r in band)
+        {
+            if (rows.Count == 0 || Mathf.Abs(rows[rows.Count - 1][0].center.y - r.center.y) > 70f) rows.Add(new List<RectInt>());
+            rows[rows.Count - 1].Add(r);
+        }
+        var ordered = new List<RectInt>();
+        foreach (var row in rows) { row.Sort((a, b) => a.xMin.CompareTo(b.xMin)); ordered.AddRange(row); }
+        return ordered;
+    }
+
+    /// <summary>Save a glyph as light grey (luminance normalised so its face is ~white), optionally narrowed.</summary>
+    static void SaveGlyph(Texture2D src, RectInt r, string name, float widthScale)
+    {
+        const int pad = 3;
+        int x0 = Mathf.Max(0, r.xMin - pad), y0 = Mathf.Max(0, r.yMin - pad);
+        int x1 = Mathf.Min(src.width, r.xMax + pad), y1 = Mathf.Min(src.height, r.yMax + pad);
+        int w = x1 - x0, h = y1 - y0;
+        var px = src.GetPixels(x0, y0, w, h);
+        // Face brightness = a high percentile of the opaque pixels' luminance.
+        var lums = new List<float>();
+        foreach (var c in px) if (c.a > 0.6f) lums.Add(0.3f * c.r + 0.59f * c.g + 0.11f * c.b);
+        lums.Sort();
+        float face = lums.Count > 0 ? Mathf.Max(0.05f, lums[(int)(lums.Count * 0.9f)]) : 1f;
+        int ow = Mathf.Max(4, Mathf.RoundToInt(w * widthScale));
+        var outTex = new Texture2D(ow, h, TextureFormat.RGBA32, false);
+        var outPx = new Color[ow * h];
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < ow; x++)
+        {
+            // Bilinear resample across X when narrowing.
+            float sx = (x + 0.5f) / widthScale - 0.5f;
+            int ix = Mathf.Clamp(Mathf.FloorToInt(sx), 0, w - 1), ix2 = Mathf.Min(w - 1, ix + 1);
+            float f = Mathf.Clamp01(sx - ix);
+            Color c = Color.Lerp(px[y * w + ix], px[y * w + ix2], f);
+            float l = Mathf.Clamp01((0.3f * c.r + 0.59f * c.g + 0.11f * c.b) / face);
+            outPx[y * ow + x] = new Color(l, l, l, c.a);
+        }
+        outTex.SetPixels(outPx);
+        outTex.Apply();
+        File.WriteAllBytes($"{GlyphDir}/{name}.png", outTex.EncodeToPNG());
+        Object.DestroyImmediate(outTex);
+    }
+
+    /// <summary>Crop a rectangle and round its corners off into transparency.</summary>
+    static void SaveRounded(Texture2D src, RectInt r, float radius, string name, System.Text.StringBuilder log)
+    {
+        var px = src.GetPixels(r.xMin, r.yMin, r.width, r.height);
+        int w = r.width, h = r.height;
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            float cx = Mathf.Clamp(x + 0.5f, radius, w - radius), cy = Mathf.Clamp(y + 0.5f, radius, h - radius);
+            float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(cx, cy));
+            var c = px[y * w + x];
+            c.a = Mathf.Clamp01(radius - d + 0.5f);
+            px[y * w + x] = c;
+        }
+        var outTex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        outTex.SetPixels(px);
+        outTex.Apply();
+        File.WriteAllBytes($"{OutDir}/{name}.png", outTex.EncodeToPNG());
+        Object.DestroyImmediate(outTex);
+        log.Append($"{name} [{r.xMin},{src.height - r.yMax} {w}x{h}] ");
     }
 
     // ---------------- fonts ----------------

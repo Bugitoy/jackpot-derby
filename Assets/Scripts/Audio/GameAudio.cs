@@ -57,8 +57,28 @@ public class GameAudio : MonoBehaviour
         stormSource.loop = true;
 
         SubscribeStatic();
-        SceneManager.sceneLoaded += (s, m) => BindScene();
+        SceneManager.sceneLoaded += OnSceneLoaded;
         BindScene();
+    }
+
+    void OnSceneLoaded(Scene s, LoadSceneMode m) => BindScene();
+
+    /// <summary>
+    /// Unhook from every static event: with domain reload off, a destroyed GameAudio left subscribed
+    /// would throw (its AudioSources are gone) and stop the other listeners of that event, e.g. the
+    /// BLACK CAT! popup and the cat's dash.
+    /// </summary>
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        CarHealth.AnyDamaged -= OnDamaged;
+        CarHealth.AnyEliminated -= OnEliminated;
+        RamDamage.AnyRam -= OnRam;
+        Chest.AnyOpened -= OnChestOpened;
+        Chest.AnySpawned -= OnChestSpawned;
+        Pickup.AnyCollected -= OnPickup;
+        BlackCat.AnyScrambled -= OnCat;
+        if (I == this) I = null;
     }
 
     AudioSource NewSource(string name)
@@ -185,7 +205,7 @@ public class GameAudio : MonoBehaviour
         CarHealth.AnyEliminated += OnEliminated;
         RamDamage.AnyRam += OnRam;
         Chest.AnyOpened += OnChestOpened;
-        Chest.AnySpawned += c => { if (Bank != null) Play(Bank.chestSpawn, null, 0.55f, 1f, 0f, 0.5f); };
+        Chest.AnySpawned += OnChestSpawned;
         Pickup.AnyCollected += OnPickup;
         BlackCat.AnyScrambled += OnCat;
     }
@@ -230,6 +250,8 @@ public class GameAudio : MonoBehaviour
             playerOdo.HintRevealed += OnPlayerHint;
         }
     }
+
+    void OnChestSpawned(Chest c) { if (Bank != null) Play(Bank.chestSpawn, null, 0.55f, 1f, 0f, 0.5f); }
 
     void OnPlayerNumber(int n)
     {

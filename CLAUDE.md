@@ -25,9 +25,10 @@ and stay on your car until it's destroyed. A Bad Luck Storm shrinks the arena. *
 - R: unlock your number so it rolls again · Esc: pause
 
 ## The odometer number (core luck mechanic)
-- Range 1–99, wrapping (99 → 1 and 1 → 99). Starts at a random number.
+- Range 1–100, wrapping (100 → 1 and 1 → 100); `Odometer.Min/Max`. Shown on three reels (100 uses the
+  hundreds reel). Starts at a random number.
 - Driving forward counts **up** 1 per 3 units travelled; reversing counts **down** at the same rate.
-- Displayed as two rolling slot-reel digits (HUD for the player; a small floating number over AI cars).
+- Displayed as three rolling slot reels on the HUD for the player; AI cars show theirs on a number plate.
 - **Stopping** (speed < 0.5 for 0.4 s) **locks** the number (padlock icon) and shows a hint against the
   nearest active chest:
   - exact → **LUCKY!** (gold)
@@ -38,7 +39,7 @@ and stay on your car until it's destroyed. A Bad Luck Storm shrinks the arena. *
 - Stopping is the gamble: a stopped car is an easy target. Keep that tension.
 
 ## Chests
-- First chest at 10 s, then a new one every 25 s. Max 2 active. Each has a hidden number 1–99.
+- First chest at 10 s, then a new one every 25 s. Max 2 active. Each has a hidden number 1–100.
 - Spawn on open ground away from cars, with a light beam so everyone sees it; off-screen arrow on the HUD.
 - **Ram it** to try to open it, using your current number:
   - exact or within ±5 → opens it and upgrades you **one step**: no blaster → **small blaster** →
@@ -84,7 +85,8 @@ The player only steers; positioning is the skill. Combat is automatic, chunky, r
 
 ## Bad Luck Storm
 - Starts shrinking at 60 s, every 30 s, toward a point near the centre, down to about 30×20 units by 4 min.
-- Outside it: 5 damage per second, dark clouds and a purple tint. Match target length: 3–5 minutes.
+- It's a dark, dusty-yellow sandstorm (no purple). Outside it: 5 damage per second, dust clouds and an
+  ochre grade (Jackpot Derby/Apply Storm Look re-applies the colours). Match target length: 3–5 minutes.
 
 ## AI opponents (3)
 Use NavMesh (AI Navigation package) with a simple state machine: Wander, SeekChest, Hunt, Flee, Ram.
@@ -161,6 +163,11 @@ Old road game pieces (road_slab and variants) are optional decoration only.
   over cars, kill feed, storm timer, match timer.
 - Juice: hit flashes, screen shake, coin bursts, chest light beams, TAKEDOWN / WRECKED popups, LUCKY! popup.
 - Results screen: placement (1st–4th), trophy for 1st, wins counter saved with PlayerPrefs, Play Again.
+- Over each AI car: its painted colour number plate (purple Black Cat 13, orange Double Dice 11, red Lucky 8)
+  with its live number; when a car is hit, its name in the painted letters + the rusty health bar pop up
+  (Docs/NPC_Naming art, cut by Build Menu Art; SpriteText draws tinted glyphs, 0 = narrowed letter O).
+- Play mode runs with domain reload off: static events/lists must reset in a
+  [RuntimeInitializeOnLoadMethod(SubsystemRegistration)] and long-lived listeners must unsubscribe.
 - Menu/HUD art: Lefika's painted UI pieces and concept screens are in Docs/Menu_Assets (main menu, pause,
   How to Play). Jackpot Derby/Build Menu Art cuts them into Resources/MenuArt sprites and builds the
   Poppins fonts (Resources/UIFonts; Poppins is SIL Open Font License, Assets/UI/Fonts/OFL.txt).

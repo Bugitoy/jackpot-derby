@@ -31,6 +31,11 @@ public class MatchManager : MonoBehaviour
     /// <summary>Play Again reloads straight into the countdown; Main Menu reloads to the title screen.</summary>
     public static bool SkipMenuOnce;
 
+    // This project enters Play mode without reloading scripts, so static events and lists would keep
+    // the previous session's destroyed objects (whose handlers then throw). Start every session clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { SkipMenuOnce = false; Instance = null; }
+
     public event Action<int> CountdownTick;     // 3, 2, 1, 0 (=GO)
     public event Action MatchStarted;
     public event Action<CarHealth, CarIdentity, int> CarEliminated; // victim, killer, placement

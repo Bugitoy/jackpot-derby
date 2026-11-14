@@ -30,7 +30,7 @@ public class DebugCheats : MonoBehaviour
         if (odo != null && chest != null)
         {
             if (k.f3Key.wasPressedThisFrame) { odo.SetNumber(chest.Number, false); odo.Lock(); odo.RevealHintAgainstNearestChest(); }
-            if (k.f4Key.wasPressedThisFrame) { odo.SetNumber(chest.Number + 3, false); odo.Lock(); odo.RevealHintAgainstNearestChest(); }
+            if (k.f4Key.wasPressedThisFrame) { odo.SetNumber(chest.Number + 3 > Odometer.Max ? chest.Number - 3 : chest.Number + 3, false); odo.Lock(); odo.RevealHintAgainstNearestChest(); }
         }
         if (k.f5Key.wasPressedThisFrame)
         {

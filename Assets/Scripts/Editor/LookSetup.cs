@@ -214,8 +214,8 @@ public static class LookSetup
 
     const string StormProfilePath = "Assets/Settings/StormVolumeProfile.asset";
 
-    /// <summary>Gloomy grade faded in (weight 0..1) by StormController while the player is in the storm.</summary>
-    static void BuildStormVolume()
+    /// <summary>Dusty sandstorm grade faded in (weight 0..1) by StormController while the player is in the storm.</summary>
+    public static void BuildStormVolume()
     {
         var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(StormProfilePath);
         if (profile == null)
@@ -224,13 +224,13 @@ public static class LookSetup
             AssetDatabase.CreateAsset(profile, StormProfilePath);
         }
         var color = Get<ColorAdjustments>(profile);
-        color.saturation.Override(-35f);
-        color.postExposure.Override(-0.15f);
-        color.colorFilter.Override(new Color(0.86f, 0.86f, 1f));
+        color.saturation.Override(-20f);
+        color.postExposure.Override(-0.2f);
+        color.colorFilter.Override(new Color(1f, 0.85f, 0.6f));
         var vig = Get<Vignette>(profile);
         vig.intensity.Override(0.38f);
         vig.smoothness.Override(0.6f);
-        vig.color.Override(new Color(0.10f, 0.08f, 0.18f));
+        vig.color.Override(new Color(0.2f, 0.13f, 0.04f));
         EditorUtility.SetDirty(profile);
 
         var go = GameObject.Find("StormVolume");

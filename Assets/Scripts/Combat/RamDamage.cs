@@ -28,6 +28,11 @@ public class RamDamage : MonoBehaviour
     /// <summary>(victim, damage, was it a side/rear hit)</summary>
     public static event System.Action<RamDamage, RamDamage, float, bool> AnyRam;
 
+    // This project enters Play mode without reloading scripts, so static events and lists would keep
+    // the previous session's destroyed objects (whose handlers then throw). Start every session clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { AnyRam = null; }
+
     void Awake()
     {
         motor = GetComponent<CarMotor>();

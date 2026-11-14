@@ -86,7 +86,7 @@ public class DiceLuck : MonoBehaviour
         if (chest == null)
         {
             // Nothing to aim at yet: an ordinary random roll, but the luck is banked.
-            odo.SetNumber(UnityEngine.Random.Range(1, 100), true);
+            odo.SetNumber(UnityEngine.Random.Range(Odometer.Min, Odometer.Max + 1), true);
             RollStarted?.Invoke(stacks, false);
             return "no chest yet - luck saved for later";
         }
@@ -99,7 +99,7 @@ public class DiceLuck : MonoBehaviour
             int spread = missSpread[Mathf.Clamp(stacks, 1, missSpread.Length) - 1];
             int off = UnityEngine.Random.Range(1, spread + 1) * (UnityEngine.Random.value < 0.5f ? -1 : 1);
             n = target + off;
-            if (n < 1 || n > 99) n = target - off;   // stay on the near side, no wrapping round
+            if (n < Odometer.Min || n > Odometer.Max) n = target - off;   // stay on the near side, no wrapping round
         }
         odo.SetNumber(n, false);
         odo.Lock();

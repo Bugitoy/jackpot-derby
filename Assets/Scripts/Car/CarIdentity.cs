@@ -11,6 +11,11 @@ public class CarIdentity : MonoBehaviour
     public static readonly List<CarIdentity> All = new List<CarIdentity>();
     public static CarIdentity Player { get; private set; }
 
+    // This project enters Play mode without reloading scripts, so static events and lists would keep
+    // the previous session's destroyed objects (whose handlers then throw). Start every session clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { All.Clear(); Player = null; }
+
     void OnEnable()
     {
         if (!All.Contains(this)) All.Add(this);

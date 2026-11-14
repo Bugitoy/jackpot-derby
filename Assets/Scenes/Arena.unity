@@ -66793,7 +66793,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FxLibrary
   glowMaterial: {fileID: 2100000, guid: 13c49f6baf2539d4fbc4a29e0136c414, type: 2}
   puffMaterial: {fileID: 2100000, guid: 9ee98969b760b874ca94548672a6ebfa, type: 2}
-  coinMaterial: {fileID: 2100000, guid: a55dc8a7a60215841ac3767d9e328364, type: 2}
+  coinMaterial: {fileID: 2100000, guid: 0565c06118f6f724d90eebdd2841387d, type: 2}
   coinMesh: {fileID: 4300000, guid: e689fdb1780a05f4f8653b106170fb52, type: 2}
   ringMaterial: {fileID: 2100000, guid: 9c76ee4713f91344cb00031627058d65, type: 2}
 --- !u!114 &1074686966

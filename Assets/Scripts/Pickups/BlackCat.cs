@@ -13,6 +13,11 @@ public class BlackCat : MonoBehaviour
     public static event Action<GameObject, int> AnyScrambled;
     static readonly System.Collections.Generic.Dictionary<Odometer, float> lastScramble = new System.Collections.Generic.Dictionary<Odometer, float>();
     public static readonly System.Collections.Generic.List<BlackCat> All = new System.Collections.Generic.List<BlackCat>();
+
+    // This project enters Play mode without reloading scripts, so static events and lists would keep
+    // the previous session's destroyed objects (whose handlers then throw). Start every session clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { AnyScrambled = null; lastScramble.Clear(); All.Clear(); }
     void OnEnable() => All.Add(this);
     void OnDisable() => All.Remove(this);
 

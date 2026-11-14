@@ -31,6 +31,11 @@ public class Chest : MonoBehaviour
     public static event Action<Chest, GameObject, HintResult> AnyOpened;
     public static event Action<Chest> AnySpawned;
 
+    // This project enters Play mode without reloading scripts, so static events and lists would keep
+    // the previous session's destroyed objects (whose handlers then throw). Start every session clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { AnyOpened = null; AnySpawned = null; Active.Clear(); }
+
     readonly Dictionary<CarMotor, float> lastTry = new Dictionary<CarMotor, float>();
     float age;
     float wobble;
@@ -40,7 +45,7 @@ public class Chest : MonoBehaviour
 
     void Awake()
     {
-        Number = UnityEngine.Random.Range(1, 100);
+        Number = UnityEngine.Random.Range(Odometer.Min, Odometer.Max + 1);
         if (visual != null) visualBase = visual.localPosition;
         if (beam != null)
         {
