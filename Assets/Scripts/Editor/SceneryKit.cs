@@ -481,14 +481,6 @@ public static class SceneryKit
     }
 
     /// <summary>
-    /// Unity's Mesh LOD: lighter copies of the triangle list stored inside the same mesh (each about half
-    /// the previous one), picked at draw time by how big the object is on screen. Close up the full
-    /// mesh is drawn as before; far away a building drops to a few hundred triangles. Only the index
-    /// buffer grows, so the download barely changes. The selection is tuned in GraphicsQuality
-    /// (QualitySettings.meshLodThreshold) and per renderer (meshLodSelectionBias).
-    /// Note: GPU instancing and static batching always draw LOD0, so scenery materials don't instance.
-    /// </summary>
-    /// <summary>
     /// Models that keep their detail longer (negative selection bias = higher-detail LOD): vehicles,
     /// whose decimated paint and windows smear, and thin things (poles, lamps, bench slats, rails)
     /// that crumble or vanish when simplified. Everything else follows the global threshold.
@@ -536,7 +528,9 @@ public static class SceneryKit
                 var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(AssetDatabase.GUIDToAssetPath(g));
                 EditorUtility.DisplayProgressBar("Mesh LODs", mesh.name, done++ / (float)guids.Length);
                 // The split-off wheels of parked cars are already the far version inside a LODGroup.
-                if (mesh.name.Contains("_wheel") || mesh.lodCount > 1) continue;
+                if (mesh.name.Contains("_wheel")) continue;
+                int limit = LodLimitFor(mesh.name);
+                if (mesh.lodCount > 1 && (limit < 0 || mesh.lodCount == limit + 1)) continue; // already right
                 AddMeshLods(mesh);
             }
         }
@@ -550,13 +544,38 @@ public static class SceneryKit
         Debug.Log($"[SceneryKit] Mesh LODs added to {guids.Length} scenery meshes.");
     }
 
+    /// <summary>Specs at least this big (longest side) are buildings: their LOD chain is capped.</summary>
+    const float BuildingSize = 7f;
+    /// <summary>
+    /// Extra Mesh LODs a building keeps (LOD0 + 5, down to ~1.5k triangles). The simplifier keeps roof
+    /// heights exact up to there; past it (under ~1k triangles) roofs cave in or flatten by up to 7
+    /// units, leaving the rooftop water towers, vents and billboards floating above them.
+    /// </summary>
+    const int BuildingLodLimit = 5;
+
+    static int LodLimitFor(string name)
+    {
+        foreach (var s in AllSpecs())
+            if (s.name == name) return s.size >= BuildingSize ? BuildingLodLimit : -1;
+        return -1;
+    }
+
+    /// <summary>
+    /// Unity's Mesh LOD: lighter copies of the triangle list stored inside the same mesh (each about half
+    /// the previous one), picked at draw time by how big the object is on screen. Close up the full
+    /// mesh is drawn as before; far away it drops to a lighter level. Only the index buffer grows, so
+    /// the download barely changes. The selection is tuned in GraphicsQuality
+    /// (QualitySettings.meshLodThreshold) and per renderer (meshLodSelectionBias).
+    /// Note: GPU instancing and static batching always draw LOD0, so scenery materials don't instance.
+    /// </summary>
     static void AddMeshLods(Mesh mesh)
     {
         if (mesh.name.Contains("_wheel")) return;
+        if (mesh.lodCount > 1) mesh.lodCount = 1; // regenerate from the full mesh
         long tris = 0;
         for (int i = 0; i < mesh.subMeshCount; i++) tris += mesh.GetIndexCount(i) / 3;
         if (tris < 512) return;
-        MeshLodUtility.GenerateMeshLods(mesh, -1);
+        MeshLodUtility.GenerateMeshLods(mesh, LodLimitFor(mesh.name));
         EditorUtility.SetDirty(mesh);
     }
 
