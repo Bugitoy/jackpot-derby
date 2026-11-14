@@ -26,7 +26,7 @@ public class PlayerCarInput : CarInputSource
     void Update()
     {
         var k = Keyboard.current;
-        if (k == null) { throttle = 0f; steer = 0f; return; }
+        if (k == null || Time.timeScale <= 0f) { throttle = 0f; steer = 0f; return; }
 
         if (k.rKey.wasPressedThisFrame && odometer != null) odometer.Unlock();
         if ((k.leftShiftKey.wasPressedThisFrame || k.rightShiftKey.wasPressedThisFrame) && turbo != null) turbo.TryActivate();

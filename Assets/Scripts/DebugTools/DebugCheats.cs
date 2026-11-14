@@ -2,12 +2,13 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Testing shortcuts (turn off "cheatsEnabled" for the final build):
+/// Testing shortcuts, only in the Editor and Development builds (never in the release build):
 /// F2 show chest numbers · F3 set your number to the nearest chest's · F4 set it 3 away (CLOSE) · F5 spawn a chest now.
 /// </summary>
 public class DebugCheats : MonoBehaviour
 {
-    [SerializeField] bool cheatsEnabled = true;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("cheatsEnabled")] bool cheatsEnabledSetting = true;
+    bool cheatsEnabled => cheatsEnabledSetting && (Application.isEditor || Debug.isDebugBuild);
 
     public static bool Active { get; private set; }
     public static bool ShowChestNumbers { get; private set; }

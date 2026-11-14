@@ -83,6 +83,7 @@ public static class SceneSetup
         ModelPrefabUtil.SetField(hud, "outlinedText", OutlinedFontMaterial());
         if (sys.GetComponent<DebugCheats>() == null) sys.AddComponent<DebugCheats>();
         if (sys.GetComponent<MatchManager>() == null) sys.AddComponent<MatchManager>();
+        SetupMenus(sys);
 
         var fx = sys.GetComponent<FxLibrary>();
         if (fx == null) fx = sys.AddComponent<FxLibrary>();
@@ -92,6 +93,28 @@ public static class SceneSetup
         ModelPrefabUtil.SetField(fx, "coinMesh", CombatAssetBuilder.CoinMesh());
         ModelPrefabUtil.SetField(fx, "ringMaterial", CombatAssetBuilder.RingParticleMaterial());
         EditorSceneManager.MarkSceneDirty(sys.scene);
+    }
+
+    [MenuItem("Jackpot Derby/Setup Menus")]
+    public static void SetupMenusItem()
+    {
+        var sys = GameObject.Find("GameSystems");
+        if (sys == null) { Debug.LogError("No GameSystems object in the scene."); return; }
+        SetupMenus(sys);
+        EditorSceneManager.MarkSceneDirty(sys.scene);
+    }
+
+    static void SetupMenus(GameObject sys)
+    {
+        var menus = sys.GetComponent<Menus>();
+        if (menus == null) menus = sys.AddComponent<Menus>();
+        GameObject Model(string n) => AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Models/{n}.glb");
+        ModelPrefabUtil.SetField(menus, "carModel", Model("car"));
+        ModelPrefabUtil.SetField(menus, "chestModel", Model("chest"));
+        ModelPrefabUtil.SetField(menus, "blasterModel", Model("blaster_jackpot"));
+        ModelPrefabUtil.SetField(menus, "cloverModel", Model("clover_pickup"));
+        ModelPrefabUtil.SetField(menus, "catModel", Model("black_cat"));
+        ModelPrefabUtil.SetField(menus, "trophyModel", Model("trophy"));
     }
 
     public static void SetupPlayerCameraLight()

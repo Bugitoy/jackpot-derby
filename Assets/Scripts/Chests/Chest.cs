@@ -118,6 +118,8 @@ public class Chest : MonoBehaviour
             Vector3 away = car.transform.position - transform.position;
             away.y = 0f;
             car.ApplyKnockback(away.normalized * bounceSpeed, 0.45f);
+            var who = car.GetComponent<CarIdentity>();
+            GameAudio.ChestBonk(transform.position, who != null && who.isPlayer);
             wobble = 1f;
         }
     }

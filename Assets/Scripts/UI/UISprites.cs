@@ -34,6 +34,59 @@ public static class UISprites
     public static Sprite Ring { get { if (ring == null) ring = MakeCircle(128, 18f); return ring; } }
     public static Sprite Triangle { get { if (triangle == null) triangle = MakeTriangle(128); return triangle; } }
 
+    static Sprite glow, rays;
+
+    /// <summary>Soft radial glow, bright in the middle fading to nothing.</summary>
+    public static Sprite Glow
+    {
+        get
+        {
+            if (glow != null) return glow;
+            const int size = 128;
+            var tex = NewTex(size);
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+                float d = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+                float a = Mathf.Pow(1f - d, 2.2f);
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            glow = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return glow;
+        }
+    }
+
+    /// <summary>Cartoon sunburst: 12 soft rays fading out from the centre (spin it behind a trophy).</summary>
+    public static Sprite Rays
+    {
+        get
+        {
+            if (rays != null) return rays;
+            const int size = 256;
+            var tex = NewTex(size);
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float ang = Mathf.Atan2(dy, dx);
+                float ray = Mathf.Cos(ang * 12f);                       // 12 rays
+                float edge = Mathf.Clamp01((ray - 0.2f) * 2.5f * (0.4f + d * 2f)); // crisp-ish, wider at the rim
+                float fade = Mathf.Clamp01(1f - d) * Mathf.Clamp01(d * 4f);
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(edge * fade * 255));
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            rays = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return rays;
+        }
+    }
+
     static Texture2D NewTex(int size)
     {
         var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };

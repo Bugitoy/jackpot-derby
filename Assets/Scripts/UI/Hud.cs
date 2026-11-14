@@ -93,6 +93,7 @@ public partial class Hud : MonoBehaviour
         scaler.referenceResolution = new Vector2(1280, 720);
         scaler.matchWidthOrHeight = 0.5f;
         canvasRect = (RectTransform)go.transform;
+        hudGroup = go.AddComponent<CanvasGroup>();
 
         markerLayer = NewRect("Markers", canvasRect, Vector2.zero, Vector2.zero);
         Stretch(markerLayer);
@@ -172,6 +173,7 @@ public partial class Hud : MonoBehaviour
         UpdatePopup();
         UpdateMarkers();
         UpdateCombatUI();
+        if (hudGroup != null) hudGroup.alpha = Mathf.MoveTowards(hudGroup.alpha, hudAlphaTarget, Time.unscaledDeltaTime * 2.5f);
         cheatLine.text = DebugCheats.Active
             ? "CHEATS  F2 chest numbers  F3 exact  F4 close  F5 spawn chest\nF6 arm enemies  F7 hurt me  F8 give me Jackpot  F9 kill nearest"
             : "";
@@ -303,7 +305,7 @@ public partial class Hud : MonoBehaviour
 
     // ---------------- tiny UI helpers ----------------
 
-    static RectTransform NewRect(string name, Transform parent, Vector2 pos, Vector2 size)
+    public static RectTransform NewRect(string name, Transform parent, Vector2 pos, Vector2 size)
     {
         var go = new GameObject(name, typeof(RectTransform));
         var r = (RectTransform)go.transform;
@@ -313,7 +315,7 @@ public partial class Hud : MonoBehaviour
         return r;
     }
 
-    static Image NewImage(string name, Transform parent, Sprite sprite, Color color)
+    public static Image NewImage(string name, Transform parent, Sprite sprite, Color color)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
@@ -325,7 +327,7 @@ public partial class Hud : MonoBehaviour
         return img;
     }
 
-    static TextMeshProUGUI NewText(string name, Transform parent, string text, float size, Color color)
+    public static TextMeshProUGUI NewText(string name, Transform parent, string text, float size, Color color)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
         go.transform.SetParent(parent, false);
@@ -339,12 +341,25 @@ public partial class Hud : MonoBehaviour
         return t;
     }
 
+    public Material OutlinedText => outlinedText;
+
+    CanvasGroup hudGroup;
+    float hudAlphaTarget = 1f;
+    /// <summary>Hides the gameplay HUD while the title screen is up; fades it back in.</summary>
+    public void SetVisible(bool visible, bool instant = false)
+    {
+        hudAlphaTarget = visible ? 1f : 0f;
+        if (hudGroup == null) return;
+        if (instant) hudGroup.alpha = hudAlphaTarget;
+        hudGroup.blocksRaycasts = visible;
+    }
+
     void Outline(TextMeshProUGUI t)
     {
         if (outlinedText != null) t.fontSharedMaterial = outlinedText;
     }
 
-    static void Anchor(RectTransform r, Vector2 anchor, Vector2 pos, Vector2 size)
+    public static void Anchor(RectTransform r, Vector2 anchor, Vector2 pos, Vector2 size)
     {
         r.anchorMin = r.anchorMax = anchor;
         r.pivot = new Vector2(0.5f, 0.5f);
@@ -352,7 +367,7 @@ public partial class Hud : MonoBehaviour
         r.sizeDelta = size;
     }
 
-    static void Stretch(RectTransform r)
+    public static void Stretch(RectTransform r)
     {
         r.anchorMin = Vector2.zero;
         r.anchorMax = Vector2.one;

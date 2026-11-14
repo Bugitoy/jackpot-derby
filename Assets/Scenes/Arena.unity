@@ -65258,6 +65258,7 @@ GameObject:
   - component: {fileID: 1074686966}
   - component: {fileID: 1074686965}
   - component: {fileID: 1074686967}
+  - component: {fileID: 1074686968}
   m_Layer: 0
   m_Name: GameSystems
   m_TagString: Untagged
@@ -65387,6 +65388,30 @@ MonoBehaviour:
   cloverInterval: 40
   maxClovers: 2
   minDistanceFromCars: 15
+--- !u!114 &1074686968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1074686960}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 075a93e9f267dc64b891ac3b7f2a3e12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Menus
+  carModel: {fileID: 7822086973854754202, guid: 5586481ce74aa4441b733e5322d176dd, type: 3}
+  chestModel: {fileID: 7822086973854754202, guid: 5bc2b344371fcc847ae8ae4df743480c, type: 3}
+  blasterModel: {fileID: 7822086973854754202, guid: 27f22c5401f6b9b429433787131c1298, type: 3}
+  cloverModel: {fileID: 7822086973854754202, guid: 14d911740a9bce0498ccaa55512f6616, type: 3}
+  catModel: {fileID: 7822086973854754202, guid: 6913c134816e32a4bb94054f7dda6457, type: 3}
+  trophyModel: {fileID: 7822086973854754202, guid: 9516a3e91f3ed9f43bed1906b2081a11, type: 3}
+  orbitCentre: {x: 0, y: 0, z: 0}
+  orbitRadius: 118
+  orbitHeight: 62
+  orbitSpeed: 3
+  orbitFov: 46
+  swoopTime: 2.1
 --- !u!1001 &1074959311
 PrefabInstance:
   m_ObjectHideFlags: 0

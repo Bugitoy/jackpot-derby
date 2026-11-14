@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 177e055f060c6f843aff714db9342667, type: 3}
+  m_Name: SoundBank
+  m_EditorClassIdentifier: Assembly-CSharp::SoundBank
+  shotSmall: {fileID: 8300000, guid: defd56c77588354469a80fcd570afc70, type: 3}
+  shotJackpot: {fileID: 8300000, guid: f4a46a721cc33c7468886f5f2c18c42e, type: 3}
+  hit: {fileID: 8300000, guid: ee3dc6bd8d7679d44bb32d294cae959c, type: 3}
+  ram: {fileID: 8300000, guid: 37ebe891ea3b53642b2f8bf2bfcdee53, type: 3}
+  explosion: {fileID: 8300000, guid: 7d3e0ccbec6136d49aff13be004108c7, type: 3}
+  coins: {fileID: 8300000, guid: 4917951b4c8412141a1b34b12d07a163, type: 3}
+  takedown: {fileID: 8300000, guid: 06f9d5ba8f8ccba4bb1c31ddd60ece9a, type: 3}
+  turbo: {fileID: 8300000, guid: d5a1f8322226eb640864d40f1b8d6299, type: 3}
+  chestOpen: {fileID: 8300000, guid: 16cde5a3893ae6643b4b1ba9206fa095, type: 3}
+  chestSpawn: {fileID: 8300000, guid: 440109d991d42b549992360e0c8eaf6c, type: 3}
+  chestBonk: {fileID: 8300000, guid: 7d63e0925ab951741b14fe7ef93a48dd, type: 3}
+  lock: {fileID: 8300000, guid: b0110da5b36c75b4190594a32667feda, type: 3}
+  unlock: {fileID: 8300000, guid: db5df960410b0e84fb819619fd36e0ea, type: 3}
+  reelTick: {fileID: 8300000, guid: f1687f9891a868b479c47f6e5b9fcdcb, type: 3}
+  hintLucky: {fileID: 8300000, guid: 46fcc60dfeb7c3c408826205a996e098, type: 3}
+  hintClose: {fileID: 8300000, guid: ccb168c707c4d024897b8bbe0d258e29, type: 3}
+  hintHigh: {fileID: 8300000, guid: 0d70397796b0fdc49acbe9d75b6776c6, type: 3}
+  hintLow: {fileID: 8300000, guid: 57c0975cc95c39d4a95b10e1d5c9c886, type: 3}
+  clover: {fileID: 8300000, guid: 06bd4497fdb5f0c40970eda7201f2cee, type: 3}
+  dice: {fileID: 8300000, guid: f13e9ea1102336242a77ee220a653eac, type: 3}
+  cat: {fileID: 8300000, guid: 874fdbd4034863643aea56bd37082992, type: 3}
+  beep: {fileID: 8300000, guid: cf629d6281447044cbf67c4b55819b0e, type: 3}
+  go: {fileID: 8300000, guid: 3f3592718a008174097f79bf39bd6745, type: 3}
+  win: {fileID: 8300000, guid: 1a79b8a2065cfee4fa99fe5a7c66b4e6, type: 3}
+  lose: {fileID: 8300000, guid: 09e8a4ec8642ad242bccae9432ce46c9, type: 3}
+  uiClick: {fileID: 8300000, guid: 4a977620d72029d4d9f57daa82076079, type: 3}
+  uiHover: {fileID: 8300000, guid: 2c2d2e70f355b7a46a3748591e0da76d, type: 3}
+  thunder: {fileID: 8300000, guid: 35a2e667f1335cb4b8ea11aa36e5b0e1, type: 3}
+  stormLoop: {fileID: 8300000, guid: 1ac8292d17fa8b74a8b6a1a4a8e77c05, type: 3}
+  engineLoop: {fileID: 8300000, guid: 1f54cff2d0a1a5a4a8c470bbc24b8e86, type: 3}
+  musicMatch: {fileID: 8300000, guid: 3e88adec4490347498192f659c3596c6, type: 3}
+  musicMenu: {fileID: 8300000, guid: e7270a277d8c5f14c94ae0f6cafa3260, type: 3}

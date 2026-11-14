@@ -1,11 +1,16 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>Small frame-rate readout in the corner (F1 toggles). Used to check WebGL performance.</summary>
+/// <summary>
+/// Small frame-rate readout in the corner (F1 toggles). Used to check WebGL performance.
+/// Shown by default in the Editor and Development builds; hidden (F1 still works) in the release build.
+/// </summary>
 public class FpsCounter : MonoBehaviour
 {
     [SerializeField] bool visible = true;
     float smoothed = 60f;
+
+    void Awake() { if (!Application.isEditor && !Debug.isDebugBuild) visible = false; }
     GUIStyle style;
 
     void Update()

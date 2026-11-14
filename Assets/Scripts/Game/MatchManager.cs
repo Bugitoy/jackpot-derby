@@ -26,6 +26,10 @@ public class MatchManager : MonoBehaviour
     public int PlayerPlacement { get; private set; }
     public CarIdentity Winner { get; private set; }
     public bool ResultsVisible { get; private set; }
+    /// <summary>True while the title screen is up: the countdown waits until Menus calls StartFromMenu.</summary>
+    public bool WaitingForMenu { get; private set; }
+    /// <summary>Play Again reloads straight into the countdown; Main Menu reloads to the title screen.</summary>
+    public static bool SkipMenuOnce;
 
     public event Action<int> CountdownTick;     // 3, 2, 1, 0 (=GO)
     public event Action MatchStarted;
@@ -37,7 +41,14 @@ public class MatchManager : MonoBehaviour
     float resultsTimer = -1f;
     int totalCars;
 
-    void Awake() => Instance = this;
+    void Awake()
+    {
+        Instance = this;
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
+        WaitingForMenu = !SkipMenuOnce && FindAnyObjectByType<Menus>() != null;
+        SkipMenuOnce = false;
+    }
 
     void OnEnable() => CarHealth.AnyEliminated += OnEliminated;
     void OnDisable() => CarHealth.AnyEliminated -= OnEliminated;
@@ -59,6 +70,7 @@ public class MatchManager : MonoBehaviour
         switch (State)
         {
             case MatchState.Countdown:
+                if (WaitingForMenu) break;
                 CountdownLeft -= Time.deltaTime;
                 int tick = Mathf.CeilToInt(CountdownLeft);
                 if (tick != lastTick) { lastTick = tick; CountdownTick?.Invoke(Mathf.Max(0, tick)); }
@@ -128,9 +140,26 @@ public class MatchManager : MonoBehaviour
 
     public static int Wins => PlayerPrefs.GetInt(WinsKey, 0);
 
+    /// <summary>Called when the title screen's camera swoop lands behind the player: 3, 2, 1, GO.</summary>
+    public void StartFromMenu()
+    {
+        if (!WaitingForMenu) return;
+        WaitingForMenu = false;
+        CountdownLeft = countdownSeconds;
+        lastTick = -1;
+    }
+
     public void PlayAgain()
     {
         PlayerPrefs.Save();
+        SkipMenuOnce = true;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void BackToMenu()
+    {
+        PlayerPrefs.Save();
+        SkipMenuOnce = false;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 

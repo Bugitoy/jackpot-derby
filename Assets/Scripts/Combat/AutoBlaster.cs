@@ -148,6 +148,7 @@ public class AutoBlaster : MonoBehaviour
         var bolt = Instantiate(prefab, muzzle, Quaternion.LookRotation(Target.transform.position - muzzle));
         bolt.Launch(identity, Target, damage);
         recoil = 1f;
+        GameAudio.Shot(muzzle, loadout.Tier == BlasterTier.Jackpot, identity != null && identity.isPlayer);
         if (FxLibrary.I != null)
             FxLibrary.I.MuzzleFlash(muzzle, loadout.Tier == BlasterTier.Jackpot ? new Color(1f, 0.75f, 0.2f) : new Color(0.4f, 1f, 0.8f), flashScale);
     }

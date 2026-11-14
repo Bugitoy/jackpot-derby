@@ -76,6 +76,9 @@ public partial class Hud
     TextMeshProUGUI resultsTitle, resultsSub;
     RectTransform resultsCard;
     float resultsAge;
+    RectTransform resultsButtons;
+    RawImage resultsTrophy;
+    Image resultsRays;
     bool matchBound;
 
     // ---------------- build ----------------
@@ -209,7 +212,7 @@ public partial class Hud
 
         var card = NewImage("Card", dim.rectTransform, UISprites.RoundedRect, new Color(0.08f, 0.16f, 0.18f, 0.97f));
         resultsCard = card.rectTransform;
-        Anchor(resultsCard, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(560f, 330f));
+        Anchor(resultsCard, new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(620f, 360f));
         resultsTitle = NewText("Title", resultsCard, "1ST PLACE!", 64, GoldBar);
         resultsTitle.fontStyle = FontStyles.Bold;
         Anchor(resultsTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(540f, 80f));
@@ -218,20 +221,8 @@ public partial class Hud
         Anchor(resultsSub.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(520f, 70f));
         resultsSub.textWrappingMode = TextWrappingModes.Normal;
 
-        var buttonImg = NewImage("PlayAgain", resultsCard, UISprites.RoundedRect, GoldBar);
-        buttonImg.raycastTarget = true;
-        Anchor(buttonImg.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 62f), new Vector2(300f, 70f));
-        var button = buttonImg.gameObject.AddComponent<Button>();
-        var colors = button.colors;
-        colors.highlightedColor = new Color(1f, 0.95f, 0.75f);
-        colors.pressedColor = new Color(0.85f, 0.7f, 0.3f);
-        button.colors = colors;
-        button.onClick.AddListener(() => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); });
-        var label = NewText("Label", buttonImg.rectTransform, "PLAY AGAIN", 32, new Color(0.15f, 0.1f, 0.05f));
-        label.fontStyle = FontStyles.Bold;
-        Anchor(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), new Vector2(300f, 50f));
-        var hint = NewText("EnterHint", buttonImg.rectTransform, "press ENTER", 13, new Color(0.15f, 0.1f, 0.05f, 0.8f));
-        Anchor(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(200f, 16f));
+        resultsButtons = NewRect("Buttons", resultsCard, Vector2.zero, new Vector2(600f, 80f));
+        Anchor(resultsButtons, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(600f, 80f));
 
         resultsPanel.SetActive(false);
 
@@ -360,6 +351,7 @@ public partial class Hud
                 resultsAge += Time.unscaledDeltaTime;
                 float s = resultsAge < 0.2f ? Mathf.Lerp(0.6f, 1.08f, resultsAge / 0.2f) : 1f + 0.08f * Mathf.Exp(-(resultsAge - 0.2f) * 8f) * Mathf.Cos((resultsAge - 0.2f) * 22f);
                 resultsCard.localScale = Vector3.one * s;
+                if (resultsRays != null) resultsRays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -resultsAge * 18f);
                 var k = Keyboard.current;
                 if (k != null && (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame)) mm.PlayAgain();
             }
@@ -570,6 +562,26 @@ public partial class Hud
     void ShowResults(int placement)
     {
         resultsPanel.SetActive(true);
+        if (resultsButtons.childCount == 0 && Menus.Instance != null)
+        {
+            var ink = new Color(0.14f, 0.09f, 0.04f);
+            Menus.Instance.MakeButton(resultsButtons, "PLAY AGAIN", GoldBar, ink, new Vector2(-105f, 0f), new Vector2(280f, 70f), 32,
+                () => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); }, "press ENTER");
+            Menus.Instance.MakeButton(resultsButtons, "MAIN MENU", TealBar, ink, new Vector2(165f, -4f), new Vector2(200f, 54f), 22,
+                () => { if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu(); });
+        }
+        bool trophy = placement == 1 && Menus.Instance != null;
+        if (trophy && resultsTrophy == null)
+        {
+            resultsRays = NewImage("TrophyRays", resultsCard, UISprites.Rays, new Color(1f, 0.85f, 0.35f, 0.55f));
+            Anchor(resultsRays.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(380f, 380f));
+            var glow = NewImage("TrophyGlow", resultsCard, UISprites.Glow, new Color(1f, 0.8f, 0.3f, 0.75f));
+            Anchor(glow.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(260f, 260f));
+            resultsTrophy = Menus.Instance.MakeTrophy(resultsCard, new Vector2(230f, 230f));
+            Anchor(resultsTrophy.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 40f), new Vector2(230f, 230f));
+        }
+        resultsTitle.rectTransform.anchoredPosition = new Vector2(0f, trophy ? -118f : -70f);
+        resultsSub.rectTransform.anchoredPosition = new Vector2(0f, trophy ? -26f : 10f);
         resultsAge = 0f;
         bool won = placement == 1;
         resultsTitle.text = won ? "1ST PLACE!" : placement > 0 ? "YOU PLACED " + MatchManager.Ordinal(placement) : "MATCH OVER";
