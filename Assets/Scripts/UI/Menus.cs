@@ -317,7 +317,7 @@ public class Menus : MonoBehaviour
         Card(grid, 0, 1, blasterModel, Teal, "BLASTERS",
              "Chests upgrade you: <b>Small Blaster</b>, then the <b>Jackpot Cannon</b>.\nThey fire by themselves at the nearest enemy in range. You just drive.");
         Card(grid, 1, 1, cloverModel, new Color(0.45f, 0.95f, 0.45f), "LUCK & BAD LUCK",
-             "<b>Clovers</b> repair you. <b>Dice</b> re-roll your number. <b>Black cats</b> scramble it!\nStay out of the purple <b>Bad Luck Storm</b>: it closes in.");
+             "<b>Dice</b> stack luck: each one ups your odds of rolling a chest's exact number. <b>Black cats</b> wipe it!\n<b>Clovers</b> repair you. Avoid the purple <b>Storm</b>.");
         Card(grid, 2, 1, trophyModel, Red, "LAST CAR STANDING",
              "Blast and ram the other three cars. Side and rear rams hit hardest.\nUnarmed? Run, hide and hunt for chests. <b>Last car alive wins!</b>");
 

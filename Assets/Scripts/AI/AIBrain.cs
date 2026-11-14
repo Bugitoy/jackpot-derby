@@ -173,7 +173,7 @@ public class AIBrain : MonoBehaviour
         return wants;
     }
 
-    /// <summary>Clovers when hurt (everyone); dice for gamblers (Double Dice).</summary>
+    /// <summary>Clovers when hurt (everyone); dice for gamblers (Double Dice), or anyone near one while a chest is out.</summary>
     Pickup PickPickup(float hp)
     {
         Pickup best = null;
@@ -182,9 +182,10 @@ public class AIBrain : MonoBehaviour
         foreach (var pk in Pickup.Active)
         {
             if (pk == null) continue;
-            bool wants = pk.Kind == PickupKind.Clover ? hp < 0.7f : personality.chaos > 0.3f;
-            if (!wants) continue;
             float d = Dist(pk.transform.position);
+            // Dice stack luck toward a chest: gamblers always want them, everyone grabs a close one while a chest is out.
+            bool wants = pk.Kind == PickupKind.Clover ? hp < 0.7f : personality.chaos > 0.3f || (Chest.Active.Count > 0 && d < 22f);
+            if (!wants) continue;
             if (d > 50f || (storm != null && !storm.IsInside(pk.transform.position, 2f))) continue;
             if (d < bestD) { bestD = d; best = pk; }
         }

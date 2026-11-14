@@ -5,7 +5,8 @@ using UnityEngine;
 public enum PickupKind { Dice, Clover }
 
 /// <summary>
-/// Drive through it to collect. Dice: re-rolls your number to a random 1-99 and unlocks it (a gamble).
+/// Drive through it to collect. Dice: adds a luck stack and rolls your number toward the nearest chest's
+/// (see DiceLuck: more dice = better odds of the exact number).
 /// Clover: +30 car health.
 /// </summary>
 [RequireComponent(typeof(SphereCollider))]
@@ -53,10 +54,10 @@ public class Pickup : MonoBehaviour
         string msg;
         if (kind == PickupKind.Dice)
         {
-            var odo = car.GetComponent<Odometer>();
-            if (odo == null) return;
-            odo.SetNumber(UnityEngine.Random.Range(1, 100), true);
-            msg = "DICE! NEW NUMBER " + odo.Number;
+            if (car.GetComponent<Odometer>() == null) return;
+            var luck = DiceLuck.For(car);
+            string line = luck.Roll();
+            msg = $"DICE x{luck.Stacks}! {line}";
         }
         else
         {

@@ -34,7 +34,7 @@ and stay on your car until it's destroyed. A Bad Luck Storm shrinks the arena. *
   - within ±5 → **CLOSE** (green)
   - otherwise → **TOO HIGH** / **TOO LOW**, plus "WAY" in front if more than 25 off
 - A locked number stays locked while you drive (so you can drive to the chest). Press **R** to unlock;
-  it then rolls again as you drive. Opening a chest or grabbing a dice pickup also unlocks it.
+  it then rolls again as you drive. Opening a chest or a black cat also unlocks it.
 - Stopping is the gamble: a stopped car is an easy target. Keep that tension.
 
 ## Chests
@@ -73,8 +73,13 @@ The player only steers; positioning is the skill. Combat is automatic, chunky, r
 - Health 0 → eliminated (explosion of coins, car becomes a wrecked_car prop). Last car alive wins.
 
 ## Superstitions and pickups
-- **Black cats** (2–3) wander the streets. Touching one scrambles your number (random ±20) and unlocks it.
-- **Dice pickup** (die model): re-rolls your number to a random 1–99 and unlocks it. A gamble.
+- **Black cats** (2–3) wander the streets. Touching one scrambles your number (random ±20), unlocks it
+  and wipes your dice luck.
+- **Dice pickup** (die model) stacks **luck** (max 5, shown as pips by the odometer and as gold dots
+  over AI cars). Each dice rolls your number toward the nearest chest's: chance of the exact number
+  20 / 40 / 60 / 80 / 100% with 1–5 stacks; a miss lands within ±20 / 12 / 8 / 5 of it. The result
+  locks (slot-reel spin, then the hint). Opening a chest spends the luck (stacks reset). With no chest
+  out, it's a plain random re-roll but the stack is kept. Tunables live on DiceLuck.
 - **Clover pickup** (the clover alone, without the coin base of the model): +30 car health. One every 40 s, max 2 on the map.
 
 ## Bad Luck Storm

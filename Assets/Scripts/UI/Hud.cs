@@ -40,6 +40,15 @@ public partial class Hud : MonoBehaviour
     int lastNumber;
     float lockPunch;
 
+    // Dice luck: pips in the odometer panel and the slot-machine spin of the reels.
+    DiceLuck luck;
+    readonly Image[] luckPips = new Image[DiceLuck.MaxStacks];
+    readonly float[] pipPop = new float[DiceLuck.MaxStacks];
+    TextMeshProUGUI luckChance;
+    int shownStacks;
+    float spinAge = -1f, spinDur = 1f;
+    int spinTo;
+
     class Marker { public RectTransform root; public Image bubble; public Image arrow; public TextMeshProUGUI label; }
     readonly List<Marker> markers = new List<Marker>();
     RectTransform markerLayer;
@@ -72,6 +81,9 @@ public partial class Hud : MonoBehaviour
             shownValue = odometer.Number;
             lastNumber = odometer.Number;
         }
+        luck = DiceLuck.For(player.gameObject);
+        luck.RollStarted += OnDiceRoll;
+        luck.RollLanded += OnDiceLanded;
         if (loadout != null)
         {
             loadout.RewardMessage += (msg, col, sub) => ShowPopup(msg, col, sub);
@@ -100,15 +112,31 @@ public partial class Hud : MonoBehaviour
 
         // Odometer panel, bottom centre.
         var panel = NewImage("OdometerPanel", canvasRect, UISprites.RoundedRect, panelColor);
-        Anchor(panel.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 78f), new Vector2(250f, 128f));
+        Anchor(panel.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 89f), new Vector2(250f, 150f));
         var title = NewText("Title", panel.rectTransform, "YOUR NUMBER", 15, new Color(0.75f, 0.9f, 0.88f));
         Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(-18f, -13f), new Vector2(200f, 20f));
 
-        tensWindow = MakeReel(panel.rectTransform, new Vector2(-64f, -8f), out tensColumn);
-        onesWindow = MakeReel(panel.rectTransform, new Vector2(4f, -8f), out onesColumn);
+        tensWindow = MakeReel(panel.rectTransform, new Vector2(-64f, 4f), out tensColumn);
+        onesWindow = MakeReel(panel.rectTransform, new Vector2(4f, 4f), out onesColumn);
+
+        // Luck row: LUCK [] [] [] [] [] 20%
+        var luckLabel = NewText("LuckLabel", panel.rectTransform, "LUCK", 12, new Color(0.75f, 0.9f, 0.88f));
+        luckLabel.fontStyle = FontStyles.Bold;
+        Anchor(luckLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-98f, -56f), new Vector2(44f, 18f));
+        for (int i = 0; i < luckPips.Length; i++)
+        {
+            luckPips[i] = NewImage("LuckPip" + i, panel.rectTransform, UISprites.RoundedRect, new Color(1f, 1f, 1f, 0.12f));
+            Anchor(luckPips[i].rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-52f + i * 26f, -56f), new Vector2(19f, 19f));
+            luckPips[i].pixelsPerUnitMultiplier = 3.5f; // tighter corners: little dice, not coins
+            var dot = NewImage("Dot", luckPips[i].rectTransform, UISprites.Circle, new Color(0.15f, 0.1f, 0.05f, 0f));
+            Anchor(dot.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6f, 6f));
+        }
+        luckChance = NewText("LuckChance", panel.rectTransform, "", 13, new Color(0.75f, 0.9f, 0.88f));
+        luckChance.fontStyle = FontStyles.Bold;
+        Anchor(luckChance.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(100f, -56f), new Vector2(46f, 18f));
 
         // Padlock: ring shackle behind a rounded body.
-        var pad = NewRect("Padlock", panel.rectTransform, new Vector2(84f, -6f), new Vector2(44f, 60f));
+        var pad = NewRect("Padlock", panel.rectTransform, new Vector2(84f, 6f), new Vector2(44f, 60f));
         padShackle = NewImage("Shackle", pad, UISprites.Ring, gold);
         padShackleRect = padShackle.rectTransform;
         Anchor(padShackleRect, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(30f, 34f));
@@ -118,7 +146,7 @@ public partial class Hud : MonoBehaviour
         Anchor(keyhole.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(9f, 9f));
 
         hintLine = NewText("HintLine", canvasRect, "", 26, Color.white);
-        Anchor(hintLine.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 160f), new Vector2(500f, 34f));
+        Anchor(hintLine.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 182f), new Vector2(500f, 34f));
         hintLine.fontStyle = FontStyles.Bold;
         Outline(hintLine);
 
@@ -187,14 +215,30 @@ public partial class Hud : MonoBehaviour
         else if (lastNumber == 1 && n == 99) shownValue += 99f;
         lastNumber = n;
 
-        float target = n + odometer.Progress;
-        shownValue = Mathf.Lerp(shownValue, target, 1f - Mathf.Exp(-14f * Time.deltaTime));
-
-        float v = Mathf.Repeat(shownValue, 100f);
-        float ones = Mathf.Repeat(v, 10f);
-        float tens = Mathf.Floor(v / 10f) + Mathf.Clamp01(ones - 9f);
+        float ones, tens;
+        if (spinAge >= 0f)
+        {
+            // Slot-machine spin after a dice: the left reel stops first, then the right one thunks in.
+            spinAge += Time.deltaTime;
+            float tT = Mathf.Clamp01(spinAge / (spinDur * 0.7f)), tO = Mathf.Clamp01(spinAge / spinDur);
+            int tensTo = spinTo / 10, onesTo = spinTo % 10;
+            tens = Mathf.Repeat(Mathf.LerpUnclamped(tensTo - 20f, tensTo, EaseOutBack(tT)), 10f);
+            ones = Mathf.Repeat(Mathf.LerpUnclamped(onesTo - 30f, onesTo, EaseOutBack(tO)), 10f);
+            if (tT >= 1f && tO < 1f && spinAge - Time.deltaTime < spinDur * 0.7f) lockPunch = 0.6f;
+            if (tO >= 1f) { spinAge = -1f; lockPunch = 1f; }
+            shownValue = n;
+        }
+        else
+        {
+            float target = n + odometer.Progress;
+            shownValue = Mathf.Lerp(shownValue, target, 1f - Mathf.Exp(-14f * Time.deltaTime));
+            float v = Mathf.Repeat(shownValue, 100f);
+            ones = Mathf.Repeat(v, 10f);
+            tens = Mathf.Floor(v / 10f) + Mathf.Clamp01(ones - 9f);
+        }
         onesColumn.anchoredPosition = new Vector2(0f, ones * DigitH);
         tensColumn.anchoredPosition = new Vector2(0f, tens * DigitH);
+        UpdateLuckPips();
 
         bool locked = odometer.IsLocked;
         lockPunch = Mathf.Max(0f, lockPunch - Time.deltaTime * 4f);
@@ -207,6 +251,46 @@ public partial class Hud : MonoBehaviour
         padShackle.color = padBody.color;
         padShackleRect.anchoredPosition = locked ? new Vector2(0f, 10f) : new Vector2(7f, 18f);
         padShackleRect.localRotation = Quaternion.Euler(0f, 0f, locked ? 0f : -20f);
+    }
+
+    static float EaseOutBack(float t)
+    {
+        const float c1 = 1.1f, c3 = c1 + 1f;
+        float u = t - 1f;
+        return 1f + c3 * u * u * u + c1 * u * u;
+    }
+
+    void UpdateLuckPips()
+    {
+        if (luck == null) return;
+        int s = luck.Stacks;
+        if (s > shownStacks) for (int i = shownStacks; i < s; i++) pipPop[i] = 1f;
+        shownStacks = s;
+        float dt = Time.deltaTime;
+        for (int i = 0; i < luckPips.Length; i++)
+        {
+            bool on = i < s;
+            pipPop[i] = Mathf.Max(0f, pipPop[i] - dt * 3f);
+            luckPips[i].color = on ? Color.Lerp(gold, Color.white, pipPop[i]) : new Color(1f, 1f, 1f, 0.12f);
+            luckPips[i].transform.GetChild(0).GetComponent<Image>().color = new Color(0.15f, 0.1f, 0.05f, on ? 0.85f : 0f);
+            luckPips[i].rectTransform.localScale = Vector3.one * (1f + 0.6f * Mathf.Sin(pipPop[i] * Mathf.PI));
+        }
+        luckChance.text = s >= DiceLuck.MaxStacks ? "MAX" : Mathf.RoundToInt(luck.NextChance * 100f) + "%";
+        luckChance.color = s > 0 ? gold : new Color(0.75f, 0.9f, 0.88f, 0.6f);
+    }
+
+    void OnDiceRoll(int stacks, bool hadChest)
+    {
+        spinTo = odometer != null ? odometer.Number : 0;
+        spinDur = luck != null ? luck.SpinTime : 1f;
+        spinAge = 0f;
+    }
+
+    void OnDiceLanded(HintResult h, bool exact, int stacks)
+    {
+        if (exact) ShowPopup("LUCKY ROLL!", gold, "the chest's exact number - go ram it!");
+        else if (h.OpensChest) ShowPopup("CLOSE!", h.Color, "close enough - go ram the chest!");
+        else ShowPopup(h.Text, h.Color, "so close! more dice, better odds");
     }
 
     void OnLockChanged(bool locked)

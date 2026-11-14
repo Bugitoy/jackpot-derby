@@ -23,6 +23,8 @@ public class Odometer : MonoBehaviour
     /// <summary>How far toward the next number we are (-1..1). Used to roll the reels smoothly.</summary>
     public float Progress => IsLocked ? 0f : distance / unitsPerNumber;
     public HintResult LastHint { get; private set; } = HintResult.NoChest;
+    /// <summary>While the dice reels spin, stopping locks but doesn't reveal a hint (DiceLuck reveals it).</summary>
+    public bool HoldHints { get; set; }
 
     public event Action<int> NumberChanged;
     public event Action<bool> LockChanged;
@@ -63,7 +65,7 @@ public class Odometer : MonoBehaviour
     void OnStopped()
     {
         if (!IsLocked) Lock();
-        RevealHintAgainstNearestChest();
+        if (!HoldHints) RevealHintAgainstNearestChest();
     }
 
     public void Lock()

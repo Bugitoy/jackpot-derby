@@ -51,7 +51,7 @@ public partial class Hud
     readonly Dictionary<CarHealth, WorldBar> worldBars = new Dictionary<CarHealth, WorldBar>();
 
     // Small odometer number floating over each AI car (gold when locked).
-    class FloatingNumber { public RectTransform root; public Image back; public TextMeshProUGUI text; public Odometer odo; public CarHealth health; }
+    class FloatingNumber { public RectTransform root; public Image back; public TextMeshProUGUI text; public Odometer odo; public CarHealth health; public DiceLuck luck; public Image[] pips; }
     readonly List<FloatingNumber> floatingNumbers = new List<FloatingNumber>();
     readonly HashSet<CarIdentity> floatingFor = new HashSet<CarIdentity>();
     RectTransform worldBarLayer, damageLayer;
@@ -251,13 +251,14 @@ public partial class Hud
     {
         if (player == null || car != player.gameObject) return;
         bool clover = p.Kind == PickupKind.Clover;
-        ShowPopup(clover ? "LUCKY CLOVER!" : "DICE ROLL!", clover ? HpGreen : Color.white, message.Substring(message.IndexOf('!') + 1).Trim());
+        int bang = message.IndexOf('!');
+        ShowPopup(clover ? "LUCKY CLOVER!" : message.Substring(0, bang + 1), clover ? HpGreen : Color.white, message.Substring(bang + 1).Trim());
     }
 
     void OnCat(GameObject car, int newNumber)
     {
         if (player == null || car != player.gameObject) return;
-        ShowPopup("BLACK CAT!", new Color(0.75f, 0.5f, 1f), "bad luck - number scrambled to " + newNumber);
+        ShowPopup("BLACK CAT!", new Color(0.75f, 0.5f, 1f), "bad luck - number scrambled to " + newNumber + (shownStacks > 0 ? ", dice luck gone" : ""));
         CameraShake.Add(0.2f);
     }
 
@@ -449,6 +450,8 @@ public partial class Hud
             fnum.text.text = fnum.odo.Number.ToString("00");
             fnum.back.color = locked ? reelLockedColor : new Color(0.08f, 0.12f, 0.14f, 0.9f);
             fnum.text.color = locked ? digitColor : reelColor;
+            int stacks = fnum.luck != null ? fnum.luck.Stacks : 0;
+            for (int i = 0; i < fnum.pips.Length; i++) fnum.pips[i].enabled = i < stacks;
         }
         foreach (var kv in worldBars)
         {
@@ -476,7 +479,7 @@ public partial class Hud
 
     FloatingNumber MakeFloatingNumber(CarIdentity id, CarHealth h)
     {
-        var f = new FloatingNumber { health = h, odo = id.GetComponent<Odometer>() };
+        var f = new FloatingNumber { health = h, odo = id.GetComponent<Odometer>(), luck = DiceLuck.For(id.gameObject) };
         f.root = NewRect("Number_" + id.displayName, worldBarLayer, Vector2.zero, new Vector2(44f, 26f));
         f.root.anchorMin = f.root.anchorMax = Vector2.zero;
         f.back = NewImage("Back", f.root, UISprites.RoundedRect, Color.black);
@@ -486,6 +489,13 @@ public partial class Hud
         f.text = NewText("Value", f.root, "00", 20, Color.white);
         f.text.fontStyle = FontStyles.Bold;
         Stretch(f.text.rectTransform);
+        // Little gold dots under the number: how much dice luck this car is holding.
+        f.pips = new Image[DiceLuck.MaxStacks];
+        for (int i = 0; i < f.pips.Length; i++)
+        {
+            f.pips[i] = NewImage("LuckDot" + i, f.root, UISprites.Circle, GoldBar);
+            Anchor(f.pips[i].rectTransform, new Vector2(0.5f, 0f), new Vector2(-16f + i * 8f, -6f), new Vector2(6f, 6f));
+        }
         f.root.gameObject.SetActive(false);
         return f;
     }
