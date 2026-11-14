@@ -58,7 +58,11 @@ public partial class Hud : MonoBehaviour
     float spinAge = -1f, spinDur = 1f;
     int spinTo;
 
-    class Marker { public RectTransform root; public Image bubble; public Image arrow; public TextMeshProUGUI label; }
+    class Marker
+    {
+        public RectTransform root; public CanvasGroup group; public Image glow, coin, arrow;
+        public TextMeshProUGUI label, distance; public bool jackpot;
+    }
     readonly List<Marker> markers = new List<Marker>();
     RectTransform markerLayer;
 
@@ -365,6 +369,7 @@ public partial class Hud : MonoBehaviour
         if (cam == null) return;
         var chests = Chest.Active;
         while (markers.Count < chests.Count) markers.Add(MakeMarker());
+        Vector3 from = player != null ? player.transform.position : cam.transform.position;
         for (int i = 0; i < markers.Count; i++)
         {
             var m = markers[i];
@@ -372,34 +377,62 @@ public partial class Hud : MonoBehaviour
             m.root.gameObject.SetActive(show);
             if (!show) continue;
             var chest = chests[i];
-            Color col = chest.IsJackpot ? new Color(1f, 0.35f, 0.25f) : gold;
-            m.bubble.color = m.arrow.color = col;
+            if (m.jackpot != chest.IsJackpot || m.coin.sprite == null)
+            {
+                m.jackpot = chest.IsJackpot;
+                m.coin.sprite = UISprites.ChestCoin(m.jackpot);
+                m.label.color = m.jackpot ? new Color(1f, 0.94f, 0.78f) : new Color(0.36f, 0.19f, 0.02f);
+                var outlined = UIKit.Outlined(m.label.font);
+                if (m.jackpot && outlined != null) m.label.fontSharedMaterial = outlined;
+                else if (m.label.font != null) m.label.fontSharedMaterial = m.label.font.material;
+            }
+            Color col = chest.IsJackpot ? new Color(1f, 0.32f, 0.22f) : new Color(1f, 0.8f, 0.25f);
+            m.glow.color = new Color(col.r, col.g, col.b, 0.55f + 0.2f * Mathf.Sin(Time.time * 4f + i));
+            m.arrow.color = col;
             m.label.text = DebugCheats.Active && DebugCheats.ShowChestNumbers ? chest.Number.ToString() : (chest.IsJackpot ? "$" : "?");
+            m.label.fontSize = m.label.text.Length > 1 ? 22f : 30f;
 
-            Vector3 vp = cam.WorldToViewportPoint(chest.transform.position + Vector3.up * 4.5f);
+            float dist = Vector3.Distance(from, chest.transform.position);
+            m.distance.text = Mathf.RoundToInt(dist) + "m";
+
+            Vector3 vp = cam.WorldToViewportPoint(chest.transform.position + Vector3.up * 5.5f);
             bool behind = vp.z < 0f;
-            bool onScreen = !behind && vp.x > 0.04f && vp.x < 0.96f && vp.y > 0.06f && vp.y < 0.94f;
+            bool onScreen = !behind && vp.x > 0.04f && vp.x < 0.96f && vp.y > 0.08f && vp.y < 0.92f;
             Vector2 size = canvasRect.rect.size;
+            float alpha;
             if (onScreen)
             {
+                // In view: the pointer hangs over the chest's own floating token, and fades away as you
+                // get close, where the real token (and its pillar of light) does the job.
                 m.arrow.gameObject.SetActive(false);
-                m.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y);
+                m.root.anchoredPosition = new Vector2(vp.x * size.x, vp.y * size.y) + Vector2.up * 34f;
+                alpha = Mathf.InverseLerp(26f, 42f, dist);
+                m.root.localScale = Vector3.one * 0.85f;
             }
             else
             {
+                // Out of view: pinned to the screen edge, with a chevron pointing the way.
                 Vector2 d = new Vector2(vp.x - 0.5f, vp.y - 0.5f);
                 if (behind) d = -d;
-                if (d.sqrMagnitude < 1e-6f) d = Vector2.up;
-                float k = Mathf.Min(0.44f / Mathf.Max(Mathf.Abs(d.x), 1e-4f), 0.40f / Mathf.Max(Mathf.Abs(d.y), 1e-4f));
+                if (d.sqrMagnitude < 1e-6f) d = Vector2.down;
+                float k = Mathf.Min(0.44f / Mathf.Max(Mathf.Abs(d.x), 1e-4f), 0.39f / Mathf.Max(Mathf.Abs(d.y), 1e-4f));
                 Vector2 edge = new Vector2(0.5f, 0.5f) + d * k;
                 m.root.anchoredPosition = new Vector2(edge.x * size.x, edge.y * size.y);
                 m.arrow.gameObject.SetActive(true);
                 float angle = Mathf.Atan2(d.y * size.y, d.x * size.x) * Mathf.Rad2Deg - 90f;
+                float nudge = 46f + 5f * Mathf.Abs(Mathf.Sin(Time.time * 5f));
                 m.arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
-                m.arrow.rectTransform.anchoredPosition = Quaternion.Euler(0f, 0f, angle) * new Vector3(0f, 34f, 0f);
+                m.arrow.rectTransform.anchoredPosition = Quaternion.Euler(0f, 0f, angle) * new Vector3(0f, nudge, 0f);
+                alpha = 1f;
+                m.root.localScale = Vector3.one;
             }
-            float pulse = 1f + 0.08f * Mathf.Sin(Time.time * 6f);
-            m.bubble.rectTransform.localScale = Vector3.one * pulse;
+            m.group.alpha = Mathf.MoveTowards(m.group.alpha, alpha, Time.unscaledDeltaTime * 4f);
+
+            // The coin bobs and turns a little, like the token above the chest.
+            float t = Time.time * 2.2f + i * 1.7f;
+            m.coin.rectTransform.anchoredPosition = new Vector2(0f, Mathf.Sin(t) * 3f);
+            m.coin.rectTransform.localScale = new Vector3(0.82f + 0.18f * Mathf.Abs(Mathf.Cos(t * 0.5f)), 1f, 1f);
+            m.glow.rectTransform.localScale = Vector3.one * (1f + 0.1f * Mathf.Sin(Time.time * 4f + i));
         }
     }
 
@@ -408,13 +441,23 @@ public partial class Hud : MonoBehaviour
         var m = new Marker();
         m.root = NewRect("ChestMarker", markerLayer, Vector2.zero, new Vector2(10f, 10f));
         m.root.anchorMin = m.root.anchorMax = Vector2.zero;
-        m.bubble = NewImage("Bubble", m.root, UISprites.Circle, gold);
-        Anchor(m.bubble.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(42f, 42f));
-        m.label = NewText("Label", m.bubble.rectTransform, "?", 26, new Color(0.15f, 0.1f, 0.05f));
-        m.label.fontStyle = FontStyles.Bold;
-        Anchor(m.label.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(42f, 42f));
-        m.arrow = NewImage("Arrow", m.root, UISprites.Triangle, gold);
-        Anchor(m.arrow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 34f), new Vector2(26f, 22f));
+        m.group = m.root.gameObject.AddComponent<CanvasGroup>();
+        m.group.alpha = 0f;
+        m.group.blocksRaycasts = false;
+        m.glow = NewImage("Glow", m.root, UISprites.Glow, gold);
+        Anchor(m.glow.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(110f, 110f));
+        m.arrow = NewImage("Chevron", m.root, UISprites.Chevron, gold);
+        Anchor(m.arrow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 46f), new Vector2(34f, 34f));
+        m.coin = NewImage("Coin", m.root, UISprites.ChestCoin(false), Color.white);
+        Anchor(m.coin.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(54f, 54f));
+        m.label = NewText("Label", m.coin.rectTransform, "?", 30, new Color(0.36f, 0.19f, 0.02f));
+        var heavy = UIKit.Font(UIWeight.ExtraBold);
+        if (heavy != null) m.label.font = heavy;
+        Anchor(m.label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 1f), new Vector2(54f, 54f));
+        m.distance = NewText("Distance", m.root, "", 15, Color.white);
+        var outlined = UIKit.Outlined(m.distance.font);
+        if (outlined != null) m.distance.fontSharedMaterial = outlined;
+        Anchor(m.distance.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -38f), new Vector2(80f, 22f));
         return m;
     }
 

@@ -1,7 +1,10 @@
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>Builds Chest and ChestJackpot prefabs: model, box collider, Chest script, glowing light beam.</summary>
+/// <summary>
+/// Builds Chest and ChestJackpot prefabs: model, box collider, Chest script, and ChestFx (pillar of light,
+/// ground rings, floating ?/$ token, particles - after Docs/Menu_Assets/chest_concept.jpg).
+/// </summary>
 public static class ChestPrefabBuilder
 {
     public const string ChestPath = "Assets/Prefabs/Pickups/Chest.prefab";
@@ -16,6 +19,40 @@ public static class ChestPrefabBuilder
         AssetDatabase.SaveAssets();
     }
 
+    static void SetFloat(Object target, string field, float value)
+    {
+        var so = new SerializedObject(target);
+        so.FindProperty(field).floatValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static Material ShaderMaterial(string name, string shader)
+    {
+        ModelPrefabUtil.EnsureFolder("Assets/Materials/FX");
+        string path = $"Assets/Materials/FX/{name}.mat";
+        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null) { m = new Material(Shader.Find(shader)); AssetDatabase.CreateAsset(m, path); }
+        m.shader = Shader.Find(shader);
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    /// <summary>Glossy, softly glowing coin material for the floating token (colour set per chest).</summary>
+    static Material TokenMaterial(string name, float smoothness)
+    {
+        ModelPrefabUtil.EnsureFolder("Assets/Materials/FX");
+        string path = $"Assets/Materials/FX/{name}.mat";
+        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null) { m = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(m, path); }
+        m.SetFloat("_Smoothness", smoothness);
+        m.SetFloat("_Metallic", 0f);
+        m.EnableKeyword("_EMISSION");
+        m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+        m.SetColor("_EmissionColor", new Color(0.6f, 0.45f, 0.1f));
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
     static void Build(string name, string modelPath, string prefabPath, bool jackpot, float size, Color beamColor)
     {
         var root = new GameObject(name);
@@ -28,34 +65,26 @@ public static class ChestPrefabBuilder
         box.size = new Vector3(Mathf.Max(b.size.x, b.size.z) * 0.9f, b.size.y + 0.4f, Mathf.Max(b.size.x, b.size.z) * 0.9f);
         box.center = new Vector3(0f, box.size.y / 2f, 0f);
 
-        // Light beam: a tall see-through cylinder fading upward, so everyone sees where the chest is.
-        var beam = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        beam.name = "LightBeam";
-        Object.DestroyImmediate(beam.GetComponent<Collider>());
-        beam.transform.SetParent(root.transform, false);
-        float height = jackpot ? 60f : 45f;
-        beam.transform.localPosition = new Vector3(0f, height / 2f, 0f);
-        beam.transform.localScale = new Vector3(size * 0.8f, height / 2f, size * 0.8f);
-        var beamMat = ModelPrefabUtil.GlowMaterial(jackpot ? "ChestBeamJackpot" : "ChestBeam", beamColor, ModelPrefabUtil.BeamGradient());
-        var beamRenderer = beam.GetComponent<Renderer>();
-        beamRenderer.sharedMaterial = beamMat;
-        ModelPrefabUtil.NoShadows(beam);
-
-        // Glow disc on the ground.
-        var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        disc.name = "GroundGlow";
-        Object.DestroyImmediate(disc.GetComponent<Collider>());
-        disc.transform.SetParent(root.transform, false);
-        disc.transform.localPosition = new Vector3(0f, 0.04f, 0f);
-        disc.transform.localScale = new Vector3(size * 2f, 0.01f, size * 2f);
-        var c = beamColor; c.a *= 0.5f;
-        disc.GetComponent<Renderer>().sharedMaterial = ModelPrefabUtil.GlowMaterial(jackpot ? "ChestGlowJackpot" : "ChestGlow", c);
-        ModelPrefabUtil.NoShadows(disc);
+        // Light, rings, token and particles are built at runtime by ChestFx from these materials.
+        var fx = root.AddComponent<ChestFx>();
+        ModelPrefabUtil.SetBool(fx, "jackpot", jackpot);
+        ModelPrefabUtil.SetField(fx, "pillarMaterial", ShaderMaterial("ChestPillar", "JackpotDerby/LightPillar"));
+        ModelPrefabUtil.SetField(fx, "ringsMaterial", ShaderMaterial("ChestRings", "JackpotDerby/ChestRings"));
+        ModelPrefabUtil.SetField(fx, "glowParticleMaterial", CombatAssetBuilder.ParticleMaterial("FxGlow", true));
+        ModelPrefabUtil.SetField(fx, "puffParticleMaterial", CombatAssetBuilder.ParticleMaterial("FxPuff", false));
+        ModelPrefabUtil.SetField(fx, "gearParticleMaterial", CombatAssetBuilder.ParticleMaterial("FxGear", false));
+        ModelPrefabUtil.SetField(fx, "tokenMaterial", TokenMaterial("ChestToken", 0.88f));
+        ModelPrefabUtil.SetField(fx, "tokenRimMaterial", TokenMaterial("ChestTokenRim", 0.6f));
+        ModelPrefabUtil.SetField(fx, "symbolFont", AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>("Assets/Resources/UIFonts/Poppins-ExtraBold SDF.asset"));
+        SetFloat(fx, "pillarHeight", jackpot ? 52f : 42f);
+        SetFloat(fx, "pillarRadius", size * 0.55f);
+        SetFloat(fx, "ringSize", size * 2.7f);
+        SetFloat(fx, "tokenHeight", b.size.y + 2.6f);
 
         var chest = root.AddComponent<Chest>();
         ModelPrefabUtil.SetBool(chest, "isJackpot", jackpot);
         ModelPrefabUtil.SetField(chest, "visual", visual);
-        ModelPrefabUtil.SetField(chest, "beam", beamRenderer);
+        ModelPrefabUtil.SetField(chest, "fx", fx);
 
         PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
         Object.DestroyImmediate(root);

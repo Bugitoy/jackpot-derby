@@ -184,6 +184,96 @@ public static class UISprites
         }
     }
 
+    static Sprite coinGold, coinRed, chevron;
+
+    /// <summary>
+    /// A glossy cartoon coin for the chest pointers (gold for a chest, red with a gold rim for the
+    /// Jackpot chest): dark outline, bevelled rim lit from the top-left, an engraved inner ring and
+    /// a soft highlight. Drawn in full colour, so use it with Image.color = white.
+    /// </summary>
+    public static Sprite ChestCoin(bool jackpot)
+    {
+        if (jackpot && coinRed != null) return coinRed;
+        if (!jackpot && coinGold != null) return coinGold;
+        const int size = 128;
+        var tex = NewTex(size);
+        var px = new Color32[size * size];
+        Color face = jackpot ? new Color(0.93f, 0.2f, 0.16f) : new Color(1f, 0.76f, 0.2f);
+        Color faceLight = jackpot ? new Color(1f, 0.45f, 0.36f) : new Color(1f, 0.92f, 0.5f);
+        Color rimCol = jackpot ? new Color(1f, 0.74f, 0.22f) : new Color(0.86f, 0.52f, 0.1f);
+        Color rimDark = jackpot ? new Color(0.7f, 0.36f, 0.06f) : new Color(0.55f, 0.3f, 0.05f);
+        Color outline = jackpot ? new Color(0.24f, 0.04f, 0.03f) : new Color(0.3f, 0.16f, 0.03f);
+        Vector2 light = new Vector2(-0.6f, 0.8f);
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+            float r = Mathf.Sqrt(dx * dx + dy * dy);
+            float aa = 2f / size;                                   // one pixel in normalised units
+            float alpha = Mathf.Clamp01((0.98f - r) / aa);
+            float lit = r > 0.001f ? Vector2.Dot(new Vector2(dx, dy) / r, light) : 0f;
+            Color c;
+            if (r > 0.9f) c = outline;
+            else if (r > 0.74f) c = Color.Lerp(rimDark, rimCol, 0.5f + 0.5f * lit);           // bevelled rim
+            else
+            {
+                c = Color.Lerp(face, faceLight, Mathf.Clamp01(0.5f + dy * 0.6f));              // lighter at the top
+                c = Color.Lerp(c, rimDark, Mathf.Exp(-Mathf.Pow((r - 0.66f) / 0.02f, 2f)) * 0.7f); // engraved ring
+                c = Color.Lerp(c, Color.Lerp(face, Color.black, 0.25f), Mathf.Clamp01((r - 0.6f) / 0.14f) * Mathf.Clamp01(-lit) * 0.5f);
+            }
+            // Blend between bands so the rings aren't jagged.
+            if (r > 0.9f - aa && r < 0.9f + aa) c = Color.Lerp(Color.Lerp(rimDark, rimCol, 0.5f + 0.5f * lit), outline, (r - (0.9f - aa)) / (2f * aa));
+            // Soft highlight, top-left.
+            float hx = (dx + 0.32f) / 0.34f, hy = (dy - 0.38f) / 0.17f;
+            float hl = Mathf.Clamp01(1f - (hx * hx + hy * hy)) * 0.65f;
+            c = Color.Lerp(c, Color.white, hl);
+            c.a = alpha;
+            px[y * size + x] = c;
+        }
+        tex.SetPixels32(px);
+        tex.Apply();
+        var s = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        if (jackpot) coinRed = s; else coinGold = s;
+        return s;
+    }
+
+    /// <summary>A chunky rounded chevron pointing up, white with a darker outline (tint it).</summary>
+    public static Sprite Chevron
+    {
+        get
+        {
+            if (chevron != null) return chevron;
+            const int size = 96;
+            var tex = NewTex(size);
+            var px = new Color32[size * size];
+            // Distance to a "^" polyline: two thick segments meeting at the tip.
+            Vector2 tip = new Vector2(0.5f, 0.78f), l = new Vector2(0.14f, 0.3f), rr = new Vector2(0.86f, 0.3f);
+            const float half = 0.13f, edge = 0.035f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                var p = new Vector2((x + 0.5f) / size, (y + 0.5f) / size);
+                float d = Mathf.Min(SegDist(p, l, tip), SegDist(p, rr, tip));
+                float a = Mathf.Clamp01((half - d) * size);
+                float body = Mathf.Clamp01((half - edge - d) * size);
+                float shade = Mathf.Lerp(0.32f, 1f, body);
+                byte s = (byte)(shade * 255);
+                px[y * size + x] = new Color32(s, s, s, (byte)(a * 255));
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            chevron = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return chevron;
+        }
+    }
+
+    static float SegDist(Vector2 p, Vector2 a, Vector2 b)
+    {
+        Vector2 ab = b - a;
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+        return Vector2.Distance(p, a + ab * t);
+    }
+
     static Texture2D NewTex(int size)
     {
         var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };

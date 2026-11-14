@@ -40,7 +40,10 @@ and stay on your car until it's destroyed. A Bad Luck Storm shrinks the arena. *
 
 ## Chests
 - First chest at 10 s, then a new one every 25 s. Max 2 active. Each has a hidden number 1–100.
-- Spawn on open ground away from cars, with a light beam so everyone sees it; off-screen arrow on the HUD.
+- Spawn on open ground away from cars. Look follows Docs/Menu_Assets/chest_concept.jpg (ChestFx): a pillar of
+  light with rising streaks (LightPillar shader), glowing ground rings (ChestRings shader), a floating
+  glossy ?/$ token with orbiting gears (gold) or sparks (Jackpot, red), embers and dust; it drops in,
+  hops now and then, and bursts open. HUD pointer: glossy coin + distance, chevron at the screen edge.
 - **Ram it** to try to open it, using your current number:
   - exact or within ±5 → opens it and upgrades you **one step**: no blaster → **small blaster** →
     **Jackpot cannon**. The Jackpot cannon is only ever an upgrade of the small blaster (you can't skip
