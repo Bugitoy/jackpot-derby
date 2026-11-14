@@ -2,8 +2,9 @@ using UnityEngine;
 
 /// <summary>
 /// A parked car left in neutral: ram it and it rolls forward or backward along its length, then
-/// slows to a stop on rolling resistance. Its tyres grip sideways, so it never slides sideways or
-/// spins. Its wheels (the WheelPivots the scenery prefab carries) roll with it.
+/// slows to a stop on rolling resistance. Shoved from the side it slides a short way as the tyres
+/// scrub, and an off-centre hit swings it round a little. It never tips over.
+/// Its wheels (the WheelPivots the scenery prefab carries) roll with it.
 /// Bumps make a thud and a puff of dust.
 /// Set up by the PushableSetup editor script (Rigidbody, frictionless collider, NavMeshObstacle).
 /// </summary>
@@ -12,8 +13,11 @@ public class PushableVehicle : MonoBehaviour
 {
     [Tooltip("How quickly it slows down while rolling (units per second, per second).")]
     [SerializeField] float rollingResistance = 4f;
-    [Tooltip("How hard the tyres stop it sliding sideways (higher = grippier).")]
-    [SerializeField] float sideGrip = 40f;
+    [Tooltip("How quickly a sideways shove scrubs to a stop (units per second, per second). Higher = grippier tyres.")]
+    [SerializeField] float sideFriction = 14f;
+    [Tooltip("How quickly a spin from an off-centre hit dies away (radians per second, per second).")]
+    [SerializeField] float spinFriction = 4f;
+    [SerializeField] float maxSpin = 2.5f;
     [SerializeField] float maxRollSpeed = 16f;
     [Tooltip("Hits softer than this (relative speed) make no sound or dust.")]
     [SerializeField] float bumpThreshold = 3.5f;
@@ -59,13 +63,19 @@ public class PushableVehicle : MonoBehaviour
         Vector3 fwd = transform.forward;
         fwd.y = 0f;
         fwd.Normalize();
+        Vector3 right = Vector3.Cross(Vector3.up, fwd);
         Vector3 v = rb.linearVelocity;
-        v.y = 0f;
         float along = Vector3.Dot(v, fwd);
-        Vector3 side = (v - fwd * along) * Mathf.Exp(-sideGrip * dt);
+        float side = Vector3.Dot(v, right);
+        // Rolling on its wheels is easy; being shoved sideways scrubs the tyres and stops much sooner.
         along = Mathf.Clamp(Mathf.MoveTowards(along, 0f, rollingResistance * dt), -maxRollSpeed, maxRollSpeed);
-        rb.linearVelocity = fwd * along + side;
-        if (Mathf.Abs(along) < 0.05f && side.sqrMagnitude < 0.0025f) rb.Sleep();
+        side = Mathf.Clamp(Mathf.MoveTowards(side, 0f, sideFriction * dt), -maxRollSpeed, maxRollSpeed);
+        rb.linearVelocity = fwd * along + right * side;
+        // An off-centre hit swings it round a little; the tyres soon stop the spin.
+        Vector3 w = rb.angularVelocity;
+        float spin = Mathf.Clamp(Mathf.MoveTowards(w.y, 0f, spinFriction * dt), -maxSpin, maxSpin);
+        rb.angularVelocity = new Vector3(0f, spin, 0f);
+        if (Mathf.Abs(along) < 0.05f && Mathf.Abs(side) < 0.05f && Mathf.Abs(spin) < 0.03f) rb.Sleep();
     }
 
     void OnCollisionEnter(Collision c)

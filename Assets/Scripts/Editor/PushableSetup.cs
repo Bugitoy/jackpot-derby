@@ -6,7 +6,7 @@ using UnityEngine.AI;
 
 /// <summary>
 /// Turns the parked cars on the arena streets into pushable vehicles (PushableVehicle): a Rigidbody
-/// that only rolls along the car's length, a frictionless collider, and a carving NavMeshObstacle so
+/// that rolls along the car's length (and slides/swings a little when hit side-on), a frictionless collider, and a carving NavMeshObstacle so
 /// the AI steers round wherever the car has rolled to (the cars are left out of the baked NavMesh).
 /// ArenaBuilder calls Make() as it parks them; the menu item converts an already built arena.
 /// The scenery city outside the arena stays static.
@@ -187,8 +187,9 @@ public static class PushableSetup
         rb.mass = MassFor(go.name);
         rb.useGravity = false;                 // it sits on flat ground; Y is frozen
         rb.linearDamping = 0f;                 // PushableVehicle does the rolling resistance
-        rb.angularDamping = 5f;
-        rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+        rb.angularDamping = 1f;                // PushableVehicle scrubs the spin itself
+        // Can turn about Y (an off-centre hit swings it round) but never tips or leaves the ground.
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionY;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
 

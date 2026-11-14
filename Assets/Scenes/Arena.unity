@@ -11302,7 +11302,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &167323452
@@ -11315,7 +11317,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -11330,7 +11332,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &169667034
 GameObject:
@@ -17617,7 +17619,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &281295692
@@ -17630,7 +17634,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -17645,7 +17649,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &281545074
 PrefabInstance:
@@ -31220,7 +31224,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &477470557
@@ -31233,7 +31239,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -31248,7 +31254,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &480043964
 GameObject:
@@ -35582,7 +35588,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &545178289
@@ -35595,7 +35603,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -35610,7 +35618,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &546046572
 PrefabInstance:
@@ -40156,7 +40164,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &638173416
@@ -40169,7 +40179,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -40184,7 +40194,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &638789692
 PrefabInstance:
@@ -45646,7 +45656,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &715620514
@@ -45659,7 +45671,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -45674,7 +45686,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &715912341
 GameObject:
@@ -48517,7 +48529,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &767324524
@@ -48530,7 +48544,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -48545,7 +48559,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &768052925
 PrefabInstance:
@@ -53039,7 +53053,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &852719567
@@ -53052,7 +53068,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -53067,7 +53083,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &854098389
 PrefabInstance:
@@ -64428,7 +64444,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1047099905
@@ -64441,7 +64459,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -64456,7 +64474,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1048337736
 GameObject:
@@ -65076,7 +65094,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1055645258
@@ -65089,7 +65109,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -65104,7 +65124,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1055751049
 PrefabInstance:
@@ -67891,7 +67911,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1095060851
@@ -67904,7 +67926,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -67919,7 +67941,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1097360456
 PrefabInstance:
@@ -77578,7 +77600,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1274321175
@@ -77591,7 +77615,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -77606,7 +77630,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1274860574
 PrefabInstance:
@@ -81818,7 +81842,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1327424392
@@ -81831,7 +81857,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -81846,7 +81872,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1329334998
 GameObject:
@@ -88892,7 +88918,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1433249047
@@ -88905,7 +88933,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -88920,7 +88948,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1434489658
 PrefabInstance:
@@ -90702,7 +90730,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1455986175
@@ -90715,7 +90745,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -90730,7 +90760,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1455989121
 PrefabInstance:
@@ -93470,7 +93500,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1509091826
@@ -93483,7 +93515,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -93498,7 +93530,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1512825160
 GameObject:
@@ -96287,7 +96319,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1548027544
@@ -96300,7 +96334,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -96315,7 +96349,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1548070063
 PrefabInstance:
@@ -97554,7 +97588,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1565720546
@@ -97567,7 +97603,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -97582,7 +97618,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1565856391
 PrefabInstance:
@@ -98043,7 +98079,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1568345069
@@ -98056,7 +98094,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -98071,7 +98109,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1568814315
 GameObject:
@@ -98584,7 +98622,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1577742515
@@ -98597,7 +98637,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -98612,7 +98652,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1579031346
 GameObject:
@@ -102502,7 +102542,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1655386994
@@ -102515,7 +102557,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -102530,7 +102572,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1656277924
 GameObject:
@@ -104579,7 +104621,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1688958457
@@ -104592,7 +104636,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -104607,7 +104651,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1689634154
 PrefabInstance:
@@ -105739,7 +105783,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1704935839
@@ -105752,7 +105798,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -105767,7 +105813,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1705675621
 GameObject:
@@ -108504,7 +108550,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1752667386
@@ -108517,7 +108565,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -108532,7 +108580,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1752937670
 PrefabInstance:
@@ -110358,7 +110406,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1788115812
@@ -110371,7 +110421,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -110386,7 +110436,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1791475772
 GameObject:
@@ -111317,7 +111367,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1802258512
@@ -111330,7 +111382,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -111345,7 +111397,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1806542572
 PrefabInstance:
@@ -112980,7 +113032,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1835991634
@@ -112993,7 +113047,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -113008,7 +113062,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1838463518
 PrefabInstance:
@@ -117312,7 +117366,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1900580134
@@ -117325,7 +117381,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -117340,7 +117396,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1902125381
 PrefabInstance:
@@ -118295,7 +118351,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1916526399
@@ -118308,7 +118366,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -118323,7 +118381,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &1916820346
 PrefabInstance:
@@ -119184,7 +119242,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1928427511
@@ -119197,7 +119257,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -119212,7 +119272,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1929128715
 GameObject:
@@ -120395,7 +120455,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &1948958156
@@ -120408,7 +120470,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -120423,7 +120485,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &1949422571
 GameObject:
@@ -125926,7 +125988,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &2061467496
@@ -125939,7 +126003,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 1400
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -125954,7 +126018,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1 &2063582796
 GameObject:
@@ -127481,7 +127545,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &2092769930
@@ -127494,7 +127560,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -127509,7 +127575,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &2095138378
 PrefabInstance:
@@ -128185,7 +128251,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PushableVehicle
   rollingResistance: 4
-  sideGrip: 40
+  sideFriction: 14
+  spinFriction: 4
+  maxSpin: 2.5
   maxRollSpeed: 16
   bumpThreshold: 3.5
 --- !u!54 &2104572249
@@ -128198,7 +128266,7 @@ Rigidbody:
   serializedVersion: 5
   m_Mass: 900
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -128213,7 +128281,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!1001 &2106144495
 PrefabInstance:
