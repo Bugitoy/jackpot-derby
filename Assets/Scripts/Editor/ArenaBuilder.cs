@@ -780,8 +780,13 @@ public static class ArenaBuilder
         }
     }
 
+    /// <summary>
+    /// Static-batch the flat ground pieces (road quads, slabs). Scenery models are left out: a
+    /// static-batched copy always draws its full-detail Mesh LOD and adds its whole mesh to the build.
+    /// </summary>
     static void SetStaticRecursive(GameObject go)
     {
+        if (PrefabUtility.IsAnyPrefabInstanceRoot(go)) return;
         GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic);
         foreach (Transform child in go.transform) SetStaticRecursive(child.gameObject);
     }

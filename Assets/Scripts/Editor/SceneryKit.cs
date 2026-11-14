@@ -209,6 +209,7 @@ public static class SceneryKit
         var oldMesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
         if (oldMesh != null) { ReplaceMeshData(oldMesh, mesh); Object.DestroyImmediate(mesh); mesh = oldMesh; }
         else AssetDatabase.CreateAsset(mesh, meshPath);
+        AddMeshLods(mesh);
 
         var mats = new Material[srcMats.Count];
         for (int i = 0; i < srcMats.Count; i++)
@@ -228,6 +229,7 @@ public static class SceneryKit
         // Small street props don't need to cast shadows (saves a whole extra draw of their mesh).
         mr.shadowCastingMode = s.size < 2.5f ? ShadowCastingMode.Off : ShadowCastingMode.On;
         mr.receiveShadows = true;
+        ApplyLodBias(root, s.name);
         var oldWheels = root.transform.Find("Wheels");
         if (oldWheels != null) Object.DestroyImmediate(oldWheels.gameObject);
         var bc = root.GetComponent<BoxCollider>();
@@ -478,6 +480,79 @@ public static class SceneryKit
         EditorUtility.SetDirty(dst);
     }
 
+    /// <summary>
+    /// Unity's Mesh LOD: lighter copies of the triangle list stored inside the same mesh (each about half
+    /// the previous one), picked at draw time by how big the object is on screen. Close up the full
+    /// mesh is drawn as before; far away a building drops to a few hundred triangles. Only the index
+    /// buffer grows, so the download barely changes. The selection is tuned in GraphicsQuality
+    /// (QualitySettings.meshLodThreshold) and per renderer (meshLodSelectionBias).
+    /// Note: GPU instancing and static batching always draw LOD0, so scenery materials don't instance.
+    /// </summary>
+    /// <summary>
+    /// Models that keep their detail longer (negative selection bias = higher-detail LOD): vehicles,
+    /// whose decimated paint and windows smear, and thin things (poles, lamps, bench slats, rails)
+    /// that crumble or vanish when simplified. Everything else follows the global threshold.
+    /// </summary>
+    static readonly Dictionary<string, float> LodBias = new Dictionary<string, float>
+    {
+        { "parked_sedan", -2f }, { "parked_van", -2f }, { "taxi", -2f }, { "city_bus", -2f },
+        { "street_lamp", -2f }, { "pole_wood", -2f }, { "pole_concrete", -2f }, { "traffic_light", -2f },
+        { "park_bench", -2f }, { "guardrail", -2f }, { "fence_wood", -2f }, { "fence_wood_2", -2f },
+        { "bus_stop", -2f }, { "roof_antennas", -2f },
+    };
+
+    static void ApplyLodBias(GameObject root, string name)
+    {
+        LodBias.TryGetValue(name, out float bias);
+        var mr = root.GetComponent<MeshRenderer>();
+        if (mr != null) mr.meshLodSelectionBias = bias;
+    }
+
+    [MenuItem("Jackpot Derby/Add Mesh LODs To Scenery")]
+    public static void AddMeshLodsToAll()
+    {
+        foreach (var s in AllSpecs())
+        {
+            string prefabPath = $"{PrefabFolder}/{s.name}.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) == null) continue;
+            var root = PrefabUtility.LoadPrefabContents(prefabPath);
+            ApplyLodBias(root, s.name);
+            PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+        var guids = AssetDatabase.FindAssets("t:Mesh", new[] { MeshFolder });
+        int done = 0;
+        try
+        {
+            foreach (var g in guids)
+            {
+                var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(AssetDatabase.GUIDToAssetPath(g));
+                EditorUtility.DisplayProgressBar("Mesh LODs", mesh.name, done++ / (float)guids.Length);
+                // The split-off wheels of parked cars are already the far version inside a LODGroup.
+                if (mesh.name.Contains("_wheel") || mesh.lodCount > 1) continue;
+                AddMeshLods(mesh);
+            }
+        }
+        finally { EditorUtility.ClearProgressBar(); }
+        foreach (var g in AssetDatabase.FindAssets("t:Material", new[] { MatFolder }))
+        {
+            var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(g));
+            if (m.enableInstancing) { m.enableInstancing = false; EditorUtility.SetDirty(m); }
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[SceneryKit] Mesh LODs added to {guids.Length} scenery meshes.");
+    }
+
+    static void AddMeshLods(Mesh mesh)
+    {
+        if (mesh.name.Contains("_wheel")) return;
+        long tris = 0;
+        for (int i = 0; i < mesh.subMeshCount; i++) tris += mesh.GetIndexCount(i) / 3;
+        if (tris < 512) return;
+        MeshLodUtility.GenerateMeshLods(mesh, -1);
+        EditorUtility.SetDirty(mesh);
+    }
+
     /// <summary>Spinning wheel pivots under a "Wheels" child, with a LODGroup: Lefika's wheel close up, the model's own wheel further away.</summary>
     static void AddWheels(GameObject root, string name, List<WheelPart> wheels, Material[] mats)
     {
@@ -657,7 +732,9 @@ public static class SceneryKit
             m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
         }
 
-        m.enableInstancing = true;
+        // No GPU instancing: instanced draws always use LOD0 and would skip the Mesh LODs.
+        // The SRP Batcher already makes these shared materials cheap to draw.
+        m.enableInstancing = false;
         EditorUtility.SetDirty(m);
         return m;
     }

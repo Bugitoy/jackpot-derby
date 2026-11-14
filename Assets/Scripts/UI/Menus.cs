@@ -35,6 +35,8 @@ public class Menus : MonoBehaviour
 
     public static Menus Instance { get; private set; }
     public bool IsPaused { get; private set; }
+    /// <summary>The camera is orbiting high over the city or swooping down to the player.</summary>
+    public bool ShowingTitle => orbiting || swooping;
 
     // Ink colours for the painted buttons (dark text on each paint colour, as in the concepts).
     static readonly Color InkYellow = new Color(0.16f, 0.1f, 0.03f);
@@ -70,6 +72,7 @@ public class Menus : MonoBehaviour
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        GraphicsQuality.Changed -= RefreshGfxLabel;
         if (blurVolume != null && blurVolume.profile != null) Destroy(blurVolume.profile);
     }
 
@@ -112,6 +115,7 @@ public class Menus : MonoBehaviour
         SetGroup(pauseGroup, p == Page.Pause);
         if (winsText != null) winsText.text = $"WINS  {MatchManager.Wins}";
         SyncSliders();
+        RefreshGfxLabel();
     }
 
     static void SetGroup(CanvasGroup g, bool on)
@@ -431,6 +435,20 @@ public class Menus : MonoBehaviour
             if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu();
         });
         AddVolumeSliders(c, new Vector2(4f, -140f), new Vector2(4f, -178f), 82f, 186f, 22f);
+
+        // Graphics quality: Auto -> High -> Low (Low helps laptops with built-in graphics).
+        var gfx = UIKit.PaintedButton(c, "btn_slate", "GRAPHICS", InkSlate, new Vector2(0.5f, 0.5f), new Vector2(0f, -216f), new Vector2(250f, 36f), 17f,
+                                      () => { if (GraphicsQuality.I != null) GraphicsQuality.I.Cycle(); });
+        gfxLabel = gfx.GetComponentInChildren<TextMeshProUGUI>();
+        GraphicsQuality.Changed += RefreshGfxLabel;
+        RefreshGfxLabel();
+    }
+
+    TextMeshProUGUI gfxLabel;
+
+    void RefreshGfxLabel()
+    {
+        if (gfxLabel != null && GraphicsQuality.I != null) gfxLabel.text = GraphicsQuality.I.Label;
     }
 
     // ---------------- widgets ----------------
