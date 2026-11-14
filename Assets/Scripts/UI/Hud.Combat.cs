@@ -90,6 +90,7 @@ public partial class Hud
     float resultsAge;
     RectTransform resultsButtons;
     RawImage resultsTrophy;
+    TextMeshProUGUI resultsLabel;
     Image resultsRays;
     bool matchBound;
 
@@ -269,18 +270,22 @@ public partial class Hud
         dim.raycastTarget = true;
         resultsPanel = dim.gameObject;
 
-        var card = UIKit.ArtImage(dim.rectTransform, "card", new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), 360f, 640f);
+        var card = UIKit.ArtImage(dim.rectTransform, "card", new Vector2(0.5f, 0.5f), Vector2.zero, 350f, 640f);
         resultsCard = card.rectTransform;
-        resultsTitle = NewText("Title", resultsCard, "1ST PLACE!", 64, GoldBar);
-        resultsTitle.fontStyle = FontStyles.Bold;
-        Anchor(resultsTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(540f, 80f));
-        Outline(resultsTitle);
-        resultsSub = NewText("Sub", resultsCard, "", 24, Color.white);
-        Anchor(resultsSub.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(520f, 70f));
+        // "YOU PLACED" on top, the place itself big in the middle, then a small line about the match.
+        resultsLabel = UIKit.Label(resultsCard, "YOU PLACED", 28f, UIKit.Cream, UIWeight.ExtraBold, true);
+        resultsLabel.characterSpacing = 3f;
+        Anchor(resultsLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(560f, 40f));
+        resultsTitle = UIKit.Label(resultsCard, "1ST", 100f, GoldBar, UIWeight.ExtraBold, true);
+        Anchor(resultsTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -122f), new Vector2(560f, 110f));
+        resultsSub = UIKit.Label(resultsCard, "", 18f, Color.white, UIWeight.SemiBold, true);
+        resultsSub.richText = true;
         resultsSub.textWrappingMode = TextWrappingModes.Normal;
+        Anchor(resultsSub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -195f), new Vector2(560f, 48f));
 
+        // Both buttons the same size, side by side.
         resultsButtons = NewRect("Buttons", resultsCard, Vector2.zero, new Vector2(600f, 80f));
-        Anchor(resultsButtons, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(600f, 80f));
+        Anchor(resultsButtons, new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(600f, 80f));
 
         resultsPanel.SetActive(false);
 
@@ -683,29 +688,30 @@ public partial class Hud
         resultsPanel.SetActive(true);
         if (resultsButtons.childCount == 0 && Menus.Instance != null)
         {
-            UIKit.PaintedButton(resultsButtons, "btn_yellow_big", "PLAY AGAIN", new Color(0.16f, 0.1f, 0.03f), new Vector2(0.5f, 0.5f), new Vector2(-100f, 0f),
-                new Vector2(290f, 82f), 34f, () => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); });
-            UIKit.PaintedButton(resultsButtons, "btn_teal_big", "MAIN MENU", new Color(0.04f, 0.17f, 0.2f), new Vector2(0.5f, 0.5f), new Vector2(170f, -4f),
-                new Vector2(210f, 62f), 24f, () => { if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu(); });
+            var buttonSize = new Vector2(250f, 72f);
+            UIKit.PaintedButton(resultsButtons, "btn_yellow_big", "PLAY AGAIN", new Color(0.16f, 0.1f, 0.03f), new Vector2(0.5f, 0.5f), new Vector2(-135f, 0f),
+                buttonSize, 28f, () => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); });
+            UIKit.PaintedButton(resultsButtons, "btn_teal_big", "MAIN MENU", new Color(0.04f, 0.17f, 0.2f), new Vector2(0.5f, 0.5f), new Vector2(135f, 0f),
+                buttonSize, 28f, () => { if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu(); });
         }
         bool trophy = placement == 1 && Menus.Instance != null;
         if (trophy && resultsTrophy == null)
         {
             resultsRays = NewImage("TrophyRays", resultsCard, UISprites.Rays, new Color(1f, 0.85f, 0.35f, 0.55f));
-            Anchor(resultsRays.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(380f, 380f));
+            Anchor(resultsRays.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 62f), new Vector2(320f, 320f));
             var glow = NewImage("TrophyGlow", resultsCard, UISprites.Glow, new Color(1f, 0.8f, 0.3f, 0.75f));
-            Anchor(glow.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(260f, 260f));
-            resultsTrophy = Menus.Instance.MakeTrophy(resultsCard, new Vector2(230f, 230f));
-            Anchor(resultsTrophy.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 40f), new Vector2(230f, 230f));
+            Anchor(glow.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 62f), new Vector2(220f, 220f));
+            resultsTrophy = Menus.Instance.MakeTrophy(resultsCard, new Vector2(170f, 170f));
+            Anchor(resultsTrophy.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 72f), new Vector2(170f, 170f));
         }
-        resultsTitle.rectTransform.anchoredPosition = new Vector2(0f, trophy ? -118f : -70f);
-        resultsSub.rectTransform.anchoredPosition = new Vector2(0f, trophy ? -26f : 10f);
+        // (The trophy sits above the card's top edge, clear of "YOU PLACED".)
         resultsAge = 0f;
         bool won = placement == 1;
-        resultsTitle.text = won ? "1ST PLACE!" : placement > 0 ? "YOU PLACED " + MatchManager.Ordinal(placement) : "MATCH OVER";
+        resultsLabel.text = placement > 0 ? "YOU PLACED" : "MATCH OVER";
+        resultsTitle.text = placement > 0 ? MatchManager.Ordinal(placement) : "";
         resultsTitle.color = won ? GoldBar : placement == 2 ? new Color(0.85f, 0.88f, 0.92f) : placement == 3 ? new Color(0.9f, 0.6f, 0.35f) : Color.white;
         var mm = MatchManager.Instance;
-        string winner = mm != null && mm.Winner != null && !mm.Winner.isPlayer ? $"\n<color=#{ColorUtility.ToHtmlStringRGB(mm.Winner.color)}>{mm.Winner.displayName}</color> won the match." : "";
-        resultsSub.text = (won ? "LAST CAR STANDING - the luck is yours!" : "Better luck next time.") + winner + $"\nWins: {MatchManager.Wins}";
+        string winner = mm != null && mm.Winner != null && !mm.Winner.isPlayer ? $"<color=#{ColorUtility.ToHtmlStringRGB(mm.Winner.color)}>{mm.Winner.displayName}</color> won the match.\n" : "";
+        resultsSub.text = (won ? "Last car standing - the luck is yours!\n" : winner) + $"Wins: {MatchManager.Wins}";
     }
 }
