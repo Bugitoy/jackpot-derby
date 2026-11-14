@@ -207,7 +207,7 @@ public static class SceneryKit
         bool splitWheels = wheels != null && wheels.Count == 4;
         string meshPath = $"{MeshFolder}/{s.name}.asset";
         var oldMesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
-        if (oldMesh != null) { EditorUtility.CopySerialized(mesh, oldMesh); Object.DestroyImmediate(mesh); mesh = oldMesh; }
+        if (oldMesh != null) { ReplaceMeshData(oldMesh, mesh); Object.DestroyImmediate(mesh); mesh = oldMesh; }
         else AssetDatabase.CreateAsset(mesh, meshPath);
 
         var mats = new Material[srcMats.Count];
@@ -455,6 +455,29 @@ public static class SceneryKit
         return ToMesh(s.name, body, tangents);
     }
 
+    /// <summary>
+    /// Overwrite an existing mesh asset with new geometry through the Mesh API, so references to it
+    /// stay valid AND the GPU copy is refreshed. (EditorUtility.CopySerialized swaps the serialized
+    /// data but can leave the editor drawing a stale, half-updated buffer until the next restart,
+    /// which showed as a parked sedan missing its bonnet and roof rack.)
+    /// </summary>
+    static void ReplaceMeshData(Mesh dst, Mesh src)
+    {
+        dst.Clear();
+        dst.name = src.name;
+        dst.indexFormat = src.indexFormat;
+        dst.SetVertices(src.vertices);
+        dst.SetNormals(src.normals);
+        dst.SetUVs(0, src.uv);
+        if (src.tangents.Length == src.vertexCount) dst.SetTangents(src.tangents);
+        dst.subMeshCount = src.subMeshCount;
+        for (int i = 0; i < src.subMeshCount; i++) dst.SetTriangles(src.GetTriangles(i), i);
+        dst.RecalculateBounds();
+        MeshUtility.SetMeshCompression(dst, ModelImporterMeshCompression.Off);
+        dst.UploadMeshData(false);
+        EditorUtility.SetDirty(dst);
+    }
+
     /// <summary>Spinning wheel pivots under a "Wheels" child, with a LODGroup: Lefika's wheel close up, the model's own wheel further away.</summary>
     static void AddWheels(GameObject root, string name, List<WheelPart> wheels, Material[] mats)
     {
@@ -471,7 +494,7 @@ public static class SceneryKit
             string meshPath = $"{MeshFolder}/{name}_wheel{i}.asset";
             var old = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
             Mesh mesh = wp.mesh;
-            if (old != null) { EditorUtility.CopySerialized(mesh, old); Object.DestroyImmediate(mesh); mesh = old; }
+            if (old != null) { ReplaceMeshData(old, mesh); Object.DestroyImmediate(mesh); mesh = old; }
             else AssetDatabase.CreateAsset(mesh, meshPath);
 
             var pivot = new GameObject("WheelPivot").transform;
