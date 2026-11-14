@@ -499,11 +499,18 @@ public static class SceneryKit
         { "street_lamp", -2f }, { "pole_wood", -2f }, { "pole_concrete", -2f }, { "traffic_light", -2f },
         { "park_bench", -2f }, { "guardrail", -2f }, { "fence_wood", -2f }, { "fence_wood_2", -2f },
         { "bus_stop", -2f }, { "roof_antennas", -2f },
+        { "cloud", 0f }, // small model scaled up into big sky clouds
     };
+
+    /// <summary>Small props (mailboxes, drums, hydrants) smear their paint when simplified: a little extra detail.</summary>
+    const float SmallPropLodBias = -1f;
+    const float SmallPropSize = 2.6f;
 
     static void ApplyLodBias(GameObject root, string name)
     {
-        LodBias.TryGetValue(name, out float bias);
+        if (!LodBias.TryGetValue(name, out float bias))
+            foreach (var s in AllSpecs())
+                if (s.name == name && s.size <= SmallPropSize) { bias = SmallPropLodBias; break; }
         var mr = root.GetComponent<MeshRenderer>();
         if (mr != null) mr.meshLodSelectionBias = bias;
     }

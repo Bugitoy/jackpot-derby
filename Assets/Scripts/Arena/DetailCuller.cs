@@ -15,9 +15,9 @@ public class DetailCuller : MonoBehaviour
     [Tooltip("Props no bigger than this count as medium (vehicles, trees, kiosks); anything larger always shows.")]
     [SerializeField] float mediumSize = 11f;
     [Tooltip("Small props hide beyond this distance from the camera.")]
-    [SerializeField] float smallDistance = 85f;
+    [SerializeField] float smallDistance = 100f;
     [Tooltip("Medium props hide beyond this distance from the camera.")]
-    [SerializeField] float mediumDistance = 140f;
+    [SerializeField] float mediumDistance = 170f;
 
     public static DetailCuller Instance { get; private set; }
 

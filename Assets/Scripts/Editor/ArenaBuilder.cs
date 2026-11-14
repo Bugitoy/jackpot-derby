@@ -581,6 +581,26 @@ public static class ArenaBuilder
         }
         SetStaticRecursive(roads.gameObject);
         BuildDeepRings(lots, t);
+        ApplyFarLodBias(parent);
+    }
+
+    /// <summary>Mesh LOD selection bias for scenery you can never drive near (positive = lighter sooner).</summary>
+    const float FarLodBias = 1.5f;
+
+    /// <summary>
+    /// Everything more than two tiles past the arena edge (outer ring 3 onwards) switches to its
+    /// lighter Mesh LODs sooner: it's only ever seen from a distance.
+    /// </summary>
+    public static void ApplyFarLodBias(Transform outside)
+    {
+        var grid = Object.FindAnyObjectByType<ArenaGrid>();
+        float halfX = grid.Width * grid.tileSize * 0.5f, halfZ = grid.Height * grid.tileSize * 0.5f;
+        foreach (var r in outside.GetComponentsInChildren<MeshRenderer>())
+        {
+            Vector3 p = r.bounds.center;
+            float beyond = Mathf.Max(Mathf.Abs(p.x) - halfX, Mathf.Abs(p.z) - halfZ);
+            if (beyond > grid.tileSize * 2f) r.meshLodSelectionBias = FarLodBias;
+        }
     }
 
     /// <summary>Extra rows of buildings beyond the tight lots, so the city edge has depth.</summary>

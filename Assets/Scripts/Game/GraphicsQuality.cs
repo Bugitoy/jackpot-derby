@@ -8,8 +8,9 @@ public enum GfxSetting { Auto, High, Low }
 
 /// <summary>
 /// Graphics quality for weaker machines (laptops with built-in graphics, phones).
-///   High: the full look (Mesh LOD threshold 6, shadows to 50 units, bloom).
-///   Low:  lighter Mesh LODs sooner, props hidden closer, shorter shadows, 85% render scale, no bloom.
+///   High: the full look (Mesh LOD threshold 3, shadows to 50 units, bloom).
+///   Low:  lighter Mesh LODs sooner, props hidden closer, shorter shadows, no bloom
+///         (render scale stays 1: lowering it made the whole picture soft).
 ///   Auto (default): High, but drops to Low once if the first seconds of a match run under ~40 FPS
 ///   (and always Low on phones).
 /// The choice is saved in PlayerPrefs. Created automatically; it also puts the DetailCuller on the
@@ -19,11 +20,12 @@ public class GraphicsQuality : MonoBehaviour
 {
     const string PrefKey = "gfx";
 
-    [SerializeField] float highMeshLodThreshold = 6f;
-    [SerializeField] float lowMeshLodThreshold = 10f;
+    [SerializeField] float highMeshLodThreshold = 3f;
+    [SerializeField] float lowMeshLodThreshold = 6f;
     [SerializeField] float highShadowDistance = 50f;
     [SerializeField] float lowShadowDistance = 30f;
-    [SerializeField] float lowRenderScale = 0.85f;
+    [Tooltip("Below 1 renders fewer pixels but softens the whole picture.")]
+    [SerializeField] float lowRenderScale = 1f;
     [SerializeField] float lowCullScale = 0.75f;
     [Tooltip("Auto switches to Low if the match runs slower than this.")]
     [SerializeField] float autoMinFps = 40f;
