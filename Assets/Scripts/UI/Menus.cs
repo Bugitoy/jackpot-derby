@@ -297,7 +297,7 @@ public class Menus : MonoBehaviour
         var shade = Hud.NewImage("EdgeShade", r, UISprites.Vignette, new Color(0.03f, 0.04f, 0.06f, 0.5f));
         Hud.Stretch(shade.rectTransform);
 
-        var logoImg = UIKit.ArtImage(r, "logo", new Vector2(0.5f, 1f), new Vector2(0f, -146f), 202f);
+        var logoImg = UIKit.ArtImage(r, "logo", new Vector2(0.5f, 1f), new Vector2(0f, -186f), 202f);
         logoImg.preserveAspect = true;
         logo = logoImg.rectTransform;
 
