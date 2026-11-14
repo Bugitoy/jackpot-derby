@@ -416,7 +416,7 @@ public class Menus : MonoBehaviour
         Hud.Anchor(head.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -58f), new Vector2(300f, 70f));
 
         UIKit.PaintedButton(c, "btn_yellow", "RESUME", InkYellow, new Vector2(0.5f, 0.5f), new Vector2(0f, 98f), new Vector2(300f, 70f), 36f,
-                            () => Pause(false), "press ESC");
+                            () => Pause(false));
         UIKit.PaintedButton(c, "btn_teal", "RESTART", InkTeal, new Vector2(0.5f, 0.5f), new Vector2(0f, 34f), new Vector2(262f, 50f), 26f, () =>
         {
             Pause(false);

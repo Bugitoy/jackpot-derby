@@ -67,6 +67,7 @@ public class GameAudio : MonoBehaviour
         go.transform.SetParent(transform, false);
         var s = go.AddComponent<AudioSource>();
         s.playOnAwake = false;
+        s.volume = 0f;   // Unity's default is full volume: never let a source start loud
         s.dopplerLevel = 0f;
         s.rolloffMode = AudioRolloffMode.Linear;
         s.minDistance = 10f;
@@ -163,7 +164,8 @@ public class GameAudio : MonoBehaviour
             if (stormSource.isPlaying) stormSource.Stop();
             return;
         }
-        if (!stormSource.isPlaying && !AudioListener.pause) { stormSource.clip = Bank.stormLoop; stormSource.Play(); }
+        // The wind always starts silent and fades in (it used to start at full volume for a second).
+        if (!stormSource.isPlaying && !AudioListener.pause) { stormSource.clip = Bank.stormLoop; stormSource.volume = 0f; stormSource.Play(); }
 
         var player = CarIdentity.Player;
         bool outside = player != null && !storm.IsInside(player.transform.position, 0f);
