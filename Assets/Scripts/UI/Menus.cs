@@ -3,17 +3,21 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 /// <summary>
-/// Title screen, How to Play and the pause menu, built in code like the HUD.
+/// Title screen, How to Play and the pause menu, built in code from Lefika's painted menu art
+/// (see UIKit / MenuArtBuilder) to match the concept screens in Docs/Menu_Assets.
 /// On the title screen the camera orbits slowly over the city; PLAY swoops it down behind
-/// Lucky 7 and then the 3-2-1 countdown starts. Esc (or P) pauses during a match.
+/// Lucky 7 and then the 3-2-1 countdown starts. Esc (or P) pauses during a match; the pause menu
+/// and How to Play blur and darken the game behind them.
 /// </summary>
 [DefaultExecutionOrder(200)] // after ChaseCamera, so the swoop can blend from its pose
 public class Menus : MonoBehaviour
 {
-    [Header("Models shown in the menus (raw GLB models, no gameplay scripts)")]
+    [Header("Models shown in the menus (no gameplay scripts)")]
     [SerializeField] GameObject carModel;
     [SerializeField] GameObject chestModel;
     [SerializeField] GameObject blasterModel;
@@ -32,13 +36,12 @@ public class Menus : MonoBehaviour
     public static Menus Instance { get; private set; }
     public bool IsPaused { get; private set; }
 
-    static readonly Color Panel = new Color(0.08f, 0.16f, 0.18f, 0.95f);
-    static readonly Color PanelLight = new Color(0.12f, 0.22f, 0.24f, 0.96f);
-    static readonly Color Cream = new Color(0.97f, 0.93f, 0.83f);
-    static readonly Color Gold = new Color(1f, 0.8f, 0.18f);
-    static readonly Color Teal = new Color(0.25f, 0.85f, 0.78f);
-    static readonly Color Red = new Color(0.93f, 0.3f, 0.24f);
-    static readonly Color Ink = new Color(0.14f, 0.09f, 0.04f);
+    // Ink colours for the painted buttons (dark text on each paint colour, as in the concepts).
+    static readonly Color InkYellow = new Color(0.16f, 0.1f, 0.03f);
+    static readonly Color InkTeal = new Color(0.04f, 0.17f, 0.2f);
+    static readonly Color InkSlate = new Color(0.08f, 0.16f, 0.17f);
+    static readonly Color InkCream = new Color(0.17f, 0.13f, 0.09f);
+    static readonly Color SteelTeal = new Color(0.42f, 0.86f, 0.86f);
 
     enum Page { None, Title, HowTo, Pause }
     Page page = Page.None;
@@ -47,7 +50,7 @@ public class Menus : MonoBehaviour
     Canvas canvas;
     RectTransform root;
     CanvasGroup titleGroup, howToGroup, pauseGroup;
-    RectTransform titleWord, titleCard;
+    RectTransform logo;
     TextMeshProUGUI winsText;
     readonly List<Slider> musicSliders = new List<Slider>(), sfxSliders = new List<Slider>();
     float pageAge;
@@ -61,8 +64,14 @@ public class Menus : MonoBehaviour
     Quaternion swoopFromRot;
     float swoopFromFov;
 
+    Volume blurVolume;
+
     void Awake() => Instance = this;
-    void OnDestroy() { if (Instance == this) Instance = null; }
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+        if (blurVolume != null && blurVolume.profile != null) Destroy(blurVolume.profile);
+    }
 
     void Start()
     {
@@ -73,6 +82,7 @@ public class Menus : MonoBehaviour
         var tower = GameObject.Find("lucky_tower");
         if (tower != null) orbitCentre = new Vector3(tower.transform.position.x, 0f, tower.transform.position.z);
 
+        BuildBlur();
         BuildCanvas();
         BuildTitle();
         BuildHowTo();
@@ -100,8 +110,7 @@ public class Menus : MonoBehaviour
         SetGroup(titleGroup, p == Page.Title);
         SetGroup(howToGroup, p == Page.HowTo);
         SetGroup(pauseGroup, p == Page.Pause);
-        if (winsText != null)
-            winsText.text = MatchManager.Wins > 0 ? $"WINS  <color=#FFD033>{MatchManager.Wins}</color>" : "";
+        if (winsText != null) winsText.text = $"WINS  {MatchManager.Wins}";
         SyncSliders();
     }
 
@@ -156,6 +165,10 @@ public class Menus : MonoBehaviour
         Fade(titleGroup, dt); Fade(howToGroup, dt); Fade(pauseGroup, dt);
         if (IsPaused && GameAudio.I != null) GameAudio.I.DuckMusic(0.2f, 0.45f);
 
+        // Blur the game behind the pause menu and How to Play.
+        if (blurVolume != null)
+            blurVolume.weight = Mathf.MoveTowards(blurVolume.weight, page == Page.Pause || page == Page.HowTo ? 1f : 0f, dt * 5f);
+
         var k = Keyboard.current;
         if (k != null)
         {
@@ -170,14 +183,14 @@ public class Menus : MonoBehaviour
             }
         }
 
-        // Title: the logo bobs and wobbles a little.
-        if (page == Page.Title && titleWord != null)
+        // Title: the logo pops in, then bobs and wobbles a little.
+        if (page == Page.Title && logo != null)
         {
             float t = Time.unscaledTime;
             float intro = Mathf.Clamp01(pageAge / 0.5f);
             float pop = intro < 1f ? Mathf.Lerp(0.6f, 1f, 1f - Mathf.Pow(1f - intro, 3f)) + 0.08f * Mathf.Sin(intro * Mathf.PI) : 1f;
-            titleWord.localScale = Vector3.one * (pop + 0.015f * Mathf.Sin(t * 2.1f));
-            titleWord.localRotation = Quaternion.Euler(0f, 0f, 1.6f * Mathf.Sin(t * 1.3f));
+            logo.localScale = Vector3.one * (pop + 0.012f * Mathf.Sin(t * 2.1f));
+            logo.localRotation = Quaternion.Euler(0f, 0f, 1.2f * Mathf.Sin(t * 1.3f));
         }
     }
 
@@ -227,6 +240,28 @@ public class Menus : MonoBehaviour
     // Building
     // =====================================================================================
 
+    /// <summary>A global post-processing volume that blurs and darkens the game behind menus.</summary>
+    void BuildBlur()
+    {
+        var go = new GameObject("MenuBlurVolume");
+        go.transform.SetParent(transform, false);
+        blurVolume = go.AddComponent<Volume>();
+        blurVolume.isGlobal = true;
+        blurVolume.priority = 50f;
+        blurVolume.weight = 0f;
+        var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+        var dof = profile.Add<DepthOfField>(true);
+        dof.mode.Override(DepthOfFieldMode.Gaussian);
+        dof.gaussianStart.Override(0f);
+        dof.gaussianEnd.Override(2f);
+        dof.gaussianMaxRadius.Override(1.5f);
+        dof.highQualitySampling.Override(true);
+        var color = profile.Add<ColorAdjustments>(true);
+        color.postExposure.Override(-0.55f);
+        color.saturation.Override(-25f);
+        blurVolume.profile = profile;
+    }
+
     void BuildCanvas()
     {
         var go = new GameObject("Menus Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -251,232 +286,168 @@ public class Menus : MonoBehaviour
         return g;
     }
 
+    // ---------------- title ----------------
+
     void BuildTitle()
     {
         titleGroup = NewPage("Title", new Color(0f, 0f, 0f, 0f));
         var r = (RectTransform)titleGroup.transform;
 
-        // Soft dark gradient at the bottom so the buttons read over the city.
-        var shade = Hud.NewImage("BottomShade", r, UISprites.Vignette, new Color(0.03f, 0.05f, 0.07f, 0.55f));
+        // Soft dark edges so the logo and buttons read over the city.
+        var shade = Hud.NewImage("EdgeShade", r, UISprites.Vignette, new Color(0.03f, 0.04f, 0.06f, 0.5f));
         Hud.Stretch(shade.rectTransform);
 
-        titleWord = Hud.NewRect("Logo", r, Vector2.zero, new Vector2(900f, 220f));
-        Hud.Anchor(titleWord, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(900f, 220f));
-        var jackpot = Text(titleWord, "JACKPOT", 118, Gold, new Vector2(0f, 42f), new Vector2(900f, 130f), true);
-        jackpot.enableVertexGradient = true;
-        jackpot.colorGradient = new VertexGradient(new Color(1f, 0.93f, 0.45f), new Color(1f, 0.93f, 0.45f), new Color(1f, 0.6f, 0.12f), new Color(1f, 0.6f, 0.12f));
-        jackpot.color = Color.white;
-        jackpot.characterSpacing = 4f;
-        var derby = Text(titleWord, "DERBY", 86, Color.white, new Vector2(0f, -58f), new Vector2(900f, 100f), true);
-        derby.enableVertexGradient = true;
-        derby.colorGradient = new VertexGradient(new Color(0.55f, 1f, 0.92f), new Color(0.55f, 1f, 0.92f), new Color(0.15f, 0.7f, 0.68f), new Color(0.15f, 0.7f, 0.68f));
-        derby.characterSpacing = 18f;
+        var logoImg = UIKit.ArtImage(r, "logo", new Vector2(0.5f, 1f), new Vector2(0f, -146f), 202f);
+        logoImg.preserveAspect = true;
+        logo = logoImg.rectTransform;
 
-        var tag = Text(r, "Roll your lucky number.  Crack the chests.  Be the last car standing.", 22, Cream,
-                       Vector2.zero, new Vector2(1000f, 32f), true);
-        Hud.Anchor(tag.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -292f), new Vector2(1000f, 32f));
+        var tag = UIKit.Label(r, "Roll your lucky number.  Crack the chests.  Be the last car standing.", 22f, UIKit.Cream, UIWeight.Bold, true);
+        Hud.Anchor(tag.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -292f), new Vector2(1100f, 34f));
 
-        // Buttons
-        var col = Hud.NewRect("Buttons", r, Vector2.zero, new Vector2(320f, 200f));
-        Hud.Anchor(col, new Vector2(0.5f, 0f), new Vector2(0f, 190f), new Vector2(320f, 200f));
-        MakeButton(col, "PLAY", Gold, Ink, new Vector2(0f, 50f), new Vector2(300f, 78f), 40, Play, "press ENTER");
-        MakeButton(col, "HOW TO PLAY", Teal, Ink, new Vector2(0f, -45f), new Vector2(260f, 56f), 26, () => OpenHowTo(Page.Title));
+        UIKit.PaintedButton(r, "btn_yellow_big", "PLAY", InkYellow, new Vector2(0.5f, 0f), new Vector2(0f, 232f), new Vector2(306f, 98f), 50f, Play, "press ENTER");
+        UIKit.PaintedButton(r, "btn_teal_big", "HOW TO PLAY", InkTeal, new Vector2(0.5f, 0f), new Vector2(0f, 141f), new Vector2(264f, 70f), 29f, () => OpenHowTo(Page.Title));
 
-        winsText = Text(r, "", 22, Cream, Vector2.zero, new Vector2(300f, 30f), true);
-        winsText.richText = true;
-        Hud.Anchor(winsText.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(300f, 30f));
+        var plaque = UIKit.ArtImage(r, "plaque", new Vector2(0.5f, 0f), new Vector2(0f, 58f), 48f);
+        winsText = UIKit.Label(plaque.rectTransform, "WINS  0", 23f, InkCream, UIWeight.ExtraBold);
+        Hud.Stretch(winsText.rectTransform);
+        winsText.rectTransform.anchoredPosition = new Vector2(0f, 1f);
 
-        // Sound settings, bottom-left.
-        var vol = Hud.NewImage("Volume", r, UISprites.RoundedRect, new Color(0.08f, 0.16f, 0.18f, 0.8f));
-        Hud.Anchor(vol.rectTransform, new Vector2(0f, 0f), new Vector2(160f, 62f), new Vector2(280f, 84f));
-        MakeVolumeRow(vol.rectTransform, "MUSIC", new Vector2(0f, 16f), true);
-        MakeVolumeRow(vol.rectTransform, "SOUND", new Vector2(0f, -18f), false);
+        // Sound settings, bottom-left, on a steel plate.
+        var vol = UIKit.ArtImage(r, "steel_plate", new Vector2(0f, 0f), new Vector2(160f, 58f), 104f, 292f);
+        AddVolumeSliders(vol.rectTransform, new Vector2(0f, 19f), new Vector2(0f, -19f), 74f, 172f, 21f);
 
-        var credit = Text(r, "Unity Game Jam 2026  ·  theme: Lucky Number", 15, new Color(1f, 1f, 1f, 0.7f), Vector2.zero, new Vector2(500f, 22f), true);
+        var credit = UIKit.Label(r, "Unity Game Jam 2026  •  theme: Lucky Number", 16f, Color.white, UIWeight.SemiBold, true);
         credit.alignment = TextAlignmentOptions.Right;
-        Hud.Anchor(credit.rectTransform, new Vector2(1f, 0f), new Vector2(-270f, 30f), new Vector2(500f, 22f));
+        Hud.Anchor(credit.rectTransform, new Vector2(1f, 0f), new Vector2(-268f, 28f), new Vector2(520f, 24f));
     }
+
+    // ---------------- how to play ----------------
 
     void BuildHowTo()
     {
-        howToGroup = NewPage("HowToPlay", new Color(0.02f, 0.05f, 0.06f, 0.72f));
+        howToGroup = NewPage("HowToPlay", new Color(0.02f, 0.03f, 0.04f, 0.45f));
         var r = (RectTransform)howToGroup.transform;
 
-        var head = Text(r, "HOW TO PLAY", 54, Gold, Vector2.zero, new Vector2(800f, 64f), true);
-        Hud.Anchor(head.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -52f), new Vector2(800f, 64f));
+        var head = UIKit.Label(r, "HOW TO PLAY", 64f, Color.white, UIWeight.ExtraBold, true);
+        UIKit.GoldGradient(head);
+        Hud.Anchor(head.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(900f, 80f));
 
-        var grid = Hud.NewRect("Cards", r, Vector2.zero, new Vector2(1180f, 500f));
-        Hud.Anchor(grid, new Vector2(0.5f, 0.5f), new Vector2(0f, -8f), new Vector2(1180f, 500f));
+        var grid = Hud.NewRect("Cards", r, Vector2.zero, new Vector2(1180f, 480f));
+        Hud.Anchor(grid, new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(1180f, 480f));
 
-        Card(grid, 0, 0, carModel, Teal, "DRIVE",
-             "<b>W A S D</b> or <b>arrow keys</b> to drive, brake, reverse and steer.\n<b>SHIFT</b> = Turbo: a burst of speed and fire rate.");
-        Card(grid, 1, 0, null, Gold, "YOUR LUCKY NUMBER",
-             "Your number (1-99) rolls <b>up</b> as you drive forward and <b>down</b> in reverse.\n<b>Stop</b> to lock it and get a hint: TOO HIGH, TOO LOW, CLOSE or LUCKY!  <b>R</b> unlocks it.", true);
-        Card(grid, 2, 0, chestModel, Gold, "CHESTS",
-             "Each chest hides a number. <b>Ram it</b> with a number within 5 of it to crack it open.\nToo far off and you bounce. Spot on = <b>LUCKY!</b> and a full repair.");
-        Card(grid, 0, 1, blasterModel, Teal, "BLASTERS",
-             "Chests upgrade you: <b>Small Blaster</b>, then the <b>Jackpot Cannon</b>.\nThey fire by themselves at the nearest enemy in range. You just drive.");
-        Card(grid, 1, 1, cloverModel, new Color(0.45f, 0.95f, 0.45f), "LUCK & BAD LUCK",
-             "<b>Dice</b> stack luck: each one ups your odds of rolling a chest's exact number. <b>Black cats</b> wipe it!\n<b>Clovers</b> repair you. Avoid the purple <b>Storm</b>.");
-        Card(grid, 2, 1, trophyModel, Red, "LAST CAR STANDING",
-             "Blast and ram the other three cars. Side and rear rams hit hardest.\nUnarmed? Run, hide and hunt for chests. <b>Last car alive wins!</b>");
+        Color blue = new Color(0.36f, 0.62f, 0.86f), orange = new Color(0.96f, 0.5f, 0.22f), yellow = new Color(1f, 0.8f, 0.22f);
+        Color green = new Color(0.36f, 0.8f, 0.4f), red = new Color(0.93f, 0.3f, 0.24f);
+        Card(grid, 0, 0, carModel, blue, blue, "DRIVE",
+             "<b>W A S D</b> or <b>arrow keys</b> to drive, brake, reverse and steer. <b>SHIFT</b> = Turbo: more speed and fire rate.");
+        Card(grid, 1, 0, null, orange, UIKit.Gold, "YOUR NUMBER",
+             "Your number (1-99) rolls <b>up</b> as you drive forward and <b>down</b> in reverse. <b>Stop</b> to lock it and get a hint: TOO HIGH, TOO LOW, CLOSE or LUCKY! <b>R</b> unlocks it.", true);
+        Card(grid, 2, 0, chestModel, yellow, UIKit.Gold, "CHESTS",
+             "Each chest hides a number. <b>Ram it</b> with a number within 5 of it to crack it open. Too far off and you bounce. Spot on = <b>LUCKY!</b> and a full repair.");
+        Card(grid, 0, 1, blasterModel, blue, blue, "BLASTERS",
+             "Chests upgrade your cannon: <b>Small Blaster</b>, then the <b>Jackpot Cannon</b>. They fire by themselves at the nearest enemy in range.");
+        Card(grid, 1, 1, cloverModel, green, green, "LUCK",
+             "Each <b>Dice</b> raises your odds of rolling a chest's exact number. <b>Black cats</b> wipe it! <b>Clovers</b> repair you. Avoid the purple <b>Storm</b>.");
+        Card(grid, 2, 1, trophyModel, red, red, "LAST CAR STANDING",
+             "Blast and ram the other three cars. Side and rear rams hit hardest. Unarmed? Run, hide and hunt for chests. <b>Last car alive wins!</b>");
 
-        MakeButton(r, "BACK", Teal, Ink, Vector2.zero, new Vector2(220f, 54f), 26, () => Show(howToReturn), null, new Vector2(0.5f, 0f), new Vector2(0f, 52f));
+        var back = UIKit.PaintedButton(r, "steel_plate", "BACK", SteelTeal, new Vector2(0.5f, 0f), new Vector2(0f, 52f), new Vector2(214f, 58f), 31f,
+                                       () => Show(howToReturn), null, UIWeight.ExtraBold, true);
     }
 
-    void Card(RectTransform grid, int cx, int cy, GameObject model, Color accent, string title, string body, bool reels = false)
+    void Card(RectTransform grid, int cx, int cy, GameObject model, Color stripe, Color titleColor, string title, string body, bool reels = false)
     {
-        const float W = 376f, H = 238f;
-        var card = Hud.NewImage("Card_" + title, grid, UISprites.RoundedRect, PanelLight);
-        Hud.Anchor(card.rectTransform, new Vector2(0.5f, 0.5f), new Vector2((cx - 1) * (W + 16f), (0.5f - cy) * (H + 16f)), new Vector2(W, H));
-        var stripe = Hud.NewImage("Accent", card.rectTransform, UISprites.RoundedRect, accent);
-        Hud.Anchor(stripe.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -4f), new Vector2(W - 16f, 6f));
+        const float W = 370f, H = 226f;
+        var card = UIKit.ArtImage(grid, "card", new Vector2(0.5f, 0.5f), new Vector2((cx - 1) * (W + 22f), (0.5f - cy) * (H + 26f)), H, W);
+        card.name = "Card_" + title;
+        var cr = card.rectTransform;
+        // Coloured lip along the top edge.
+        var lip = Hud.NewImage("Lip", cr, UISprites.RoundedRect, stripe);
+        lip.pixelsPerUnitMultiplier = 6f;
+        Hud.Anchor(lip.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 1f), new Vector2(W - 34f, 6f));
 
-        var iconBack = Hud.NewImage("IconBack", card.rectTransform, UISprites.Circle, new Color(accent.r, accent.g, accent.b, 0.18f));
-        Hud.Anchor(iconBack.rectTransform, new Vector2(0f, 1f), new Vector2(66f, -66f), new Vector2(100f, 100f));
-        if (reels) MiniReels(iconBack.rectTransform);
+        const float iconX = 72f;
+        if (reels) MiniReels(cr, new Vector2(iconX, -6f));
         else if (model != null)
         {
-            var img = ModelViewport.Create(iconBack.rectTransform, model, new Vector2(118f, 118f), 35f, 30f, 16f, 1.05f);
-            Hud.Anchor(img.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118f, 118f));
+            var img = ModelViewport.Create(cr, model, new Vector2(124f, 124f), 35f, 30f, 16f, 1.05f);
+            Hud.Anchor(img.rectTransform, new Vector2(0f, 0.5f), new Vector2(iconX, -6f), new Vector2(124f, 124f));
         }
 
-        var t = Text(card.rectTransform, title, 24, accent, Vector2.zero, new Vector2(240f, 60f), true);
-        t.alignment = TextAlignmentOptions.Left;
-        t.textWrappingMode = TextWrappingModes.Normal;
-        Hud.Anchor(t.rectTransform, new Vector2(0f, 1f), new Vector2(250f, -66f), new Vector2(240f, 60f));
+        float textLeft = 136f, textW = W - textLeft - 22f;
+        var t = UIKit.Label(cr, title, title.Length > 14 ? 22f : 26f, titleColor, UIWeight.ExtraBold);
+        Hud.Anchor(t.rectTransform, new Vector2(0f, 1f), new Vector2(textLeft + textW * 0.5f, -42f), new Vector2(textW + 30f, 34f));
 
-        body = body.Replace("<b>", "<b><color=#FFE08A>").Replace("</b>", "</color></b>");
-        var b = Text(card.rectTransform, body, 17f, Cream, Vector2.zero, new Vector2(W - 36f, 110f), false);
-        b.fontStyle = FontStyles.Normal;
+        body = body.Replace("<b>", "<color=#FFC93A><font=\"Poppins-Bold SDF\">").Replace("</b>", "</font></color>");
+        var b = UIKit.Label(cr, body, 15.5f, new Color(0.93f, 0.92f, 0.88f), UIWeight.Medium);
+        b.richText = true;
         b.alignment = TextAlignmentOptions.TopLeft;
         b.textWrappingMode = TextWrappingModes.Normal;
-        b.richText = true;
-        b.lineSpacing = 4f;
-        Hud.Anchor(b.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 66f), new Vector2(W - 36f, 110f));
+        b.lineSpacing = 2f;
+        Hud.Anchor(b.rectTransform, new Vector2(0f, 1f), new Vector2(textLeft + textW * 0.5f, -64f - 64f), new Vector2(textW + 6f, 132f));
     }
 
-    /// <summary>Two little slot-reel digits showing 07, like the HUD odometer.</summary>
-    void MiniReels(RectTransform parent)
+    /// <summary>Two little gold slot-reel digits showing 07, like the number on the HUD.</summary>
+    void MiniReels(RectTransform parent, Vector2 pos)
     {
         for (int i = 0; i < 2; i++)
         {
-            var w = Hud.NewImage("Reel", parent, UISprites.RoundedRect, new Color(1f, 0.82f, 0.25f));
-            Hud.Anchor(w.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-19f + i * 38f, 0f), new Vector2(34f, 50f));
-            var d = Hud.NewText("D", w.rectTransform, i == 0 ? "0" : "7", 40, new Color(0.12f, 0.12f, 0.14f));
-            d.fontStyle = FontStyles.Bold;
+            var w = Hud.NewImage("Reel", parent, UISprites.RoundedRect, new Color(1f, 0.8f, 0.22f));
+            w.pixelsPerUnitMultiplier = 1.6f;
+            Hud.Anchor(w.rectTransform, new Vector2(0f, 0.5f), pos + new Vector2(-24f + i * 48f, 0f), new Vector2(44f, 60f));
+            var d = UIKit.Label(w.rectTransform, i == 0 ? "0" : "7", 46f, new Color(0.16f, 0.12f, 0.08f), UIWeight.ExtraBold);
             Hud.Stretch(d.rectTransform);
+            d.rectTransform.anchoredPosition = new Vector2(0f, 2f);
         }
     }
 
+    // ---------------- pause ----------------
+
     void BuildPause()
     {
-        pauseGroup = NewPage("Pause", new Color(0.02f, 0.04f, 0.06f, 0.6f));
+        pauseGroup = NewPage("Pause", new Color(0.02f, 0.03f, 0.05f, 0.35f));
         var r = (RectTransform)pauseGroup.transform;
-        var card = Hud.NewImage("Card", r, UISprites.RoundedRect, Panel);
-        Hud.Anchor(card.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420f, 470f));
-        var c = card.rectTransform;
-        var head = Text(c, "PAUSED", 52, Gold, Vector2.zero, new Vector2(400f, 64f), true);
-        Hud.Anchor(head.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(400f, 64f));
+        var board = UIKit.ArtImage(r, "board", new Vector2(0.5f, 0.5f), new Vector2(0f, 2f), 484f);
+        board.preserveAspect = true;
+        var c = board.rectTransform;
 
-        MakeButton(c, "RESUME", Gold, Ink, new Vector2(0f, 105f), new Vector2(300f, 60f), 30, () => Pause(false), "press ESC");
-        MakeButton(c, "RESTART", Teal, Ink, new Vector2(0f, 35f), new Vector2(260f, 48f), 22, () =>
+        // The title sits on the board's steel nameplate.
+        var head = UIKit.Label(c, "PAUSED", 56f, Color.white, UIWeight.ExtraBold, true);
+        UIKit.GoldGradient(head);
+        Hud.Anchor(head.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -58f), new Vector2(300f, 70f));
+
+        UIKit.PaintedButton(c, "btn_yellow", "RESUME", InkYellow, new Vector2(0.5f, 0.5f), new Vector2(0f, 98f), new Vector2(300f, 70f), 36f,
+                            () => Pause(false), "press ESC");
+        UIKit.PaintedButton(c, "btn_teal", "RESTART", InkTeal, new Vector2(0.5f, 0.5f), new Vector2(0f, 34f), new Vector2(262f, 50f), 26f, () =>
         {
             Pause(false);
             if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain();
         });
-        MakeButton(c, "HOW TO PLAY", Teal, Ink, new Vector2(0f, -22f), new Vector2(260f, 48f), 22, () => OpenHowTo(Page.Pause));
-        MakeButton(c, "MAIN MENU", new Color(0.85f, 0.85f, 0.8f), Ink, new Vector2(0f, -79f), new Vector2(260f, 48f), 22, () =>
+        UIKit.PaintedButton(c, "btn_slate", "HOW TO PLAY", InkSlate, new Vector2(0.5f, 0.5f), new Vector2(0f, -22f), new Vector2(262f, 50f), 26f,
+                            () => OpenHowTo(Page.Pause));
+        UIKit.PaintedButton(c, "btn_cream", "MAIN MENU", InkCream, new Vector2(0.5f, 0.5f), new Vector2(0f, -78f), new Vector2(262f, 50f), 26f, () =>
         {
             Pause(false);
             if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu();
         });
-        MakeVolumeRow(c, "MUSIC", new Vector2(0f, -140f), true);
-        MakeVolumeRow(c, "SOUND", new Vector2(0f, -178f), false);
+        AddVolumeSliders(c, new Vector2(4f, -140f), new Vector2(4f, -178f), 82f, 186f, 22f);
     }
 
-    // =====================================================================================
-    // Widgets
-    // =====================================================================================
+    // ---------------- widgets ----------------
 
-    TextMeshProUGUI Text(RectTransform parent, string s, float size, Color color, Vector2 pos, Vector2 box, bool outlined)
+    void AddVolumeSliders(RectTransform parent, Vector2 musicPos, Vector2 soundPos, float labelW, float trackW, float h)
     {
-        var t = Hud.NewText("Text", parent, s, size, color);
-        t.fontStyle = FontStyles.Bold;
-        t.rectTransform.anchoredPosition = pos;
-        t.rectTransform.sizeDelta = box;
-        if (outlined && Hud.Instance != null && Hud.Instance.OutlinedText != null) t.fontSharedMaterial = Hud.Instance.OutlinedText;
-        return t;
-    }
-
-    public Button MakeButton(RectTransform parent, string label, Color fill, Color ink, Vector2 pos, Vector2 size, float fontSize,
-                             Action onClick, string hint = null, Vector2? anchor = null, Vector2? anchoredPos = null)
-    {
-        var shadow = Hud.NewImage("Btn_" + label, parent, UISprites.RoundedRect, new Color(0f, 0f, 0f, 0.35f));
-        Hud.Anchor(shadow.rectTransform, anchor ?? new Vector2(0.5f, 0.5f), anchoredPos ?? pos, size);
-        shadow.raycastTarget = true;
-        var face = Hud.NewImage("Face", shadow.rectTransform, UISprites.RoundedRect, fill);
-        Hud.Anchor(face.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), size);
-        var shine = Hud.NewImage("Shine", face.rectTransform, UISprites.RoundedRect, new Color(1f, 1f, 1f, 0.22f));
-        Hud.Anchor(shine.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -size.y * 0.22f), new Vector2(size.x - 14f, size.y * 0.32f));
-        var t = Hud.NewText("Label", face.rectTransform, label, fontSize, ink);
-        t.fontStyle = FontStyles.Bold;
-        Hud.Anchor(t.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, hint != null ? 5f : 1f), size);
-        if (hint != null)
+        float music = GameAudio.I != null ? GameAudio.I.MusicVolume : 0.8f;
+        float sfx = GameAudio.I != null ? GameAudio.I.SfxVolume : 0.9f;
+        musicSliders.Add(UIKit.PaintedSlider(parent, "MUSIC", new Vector2(0.5f, 0.5f), musicPos, labelW, trackW, music, v =>
         {
-            var h = Hud.NewText("Hint", face.rectTransform, hint, 12, new Color(ink.r, ink.g, ink.b, 0.7f));
-            Hud.Anchor(h.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 11f), new Vector2(size.x, 16f));
-        }
-        var b = shadow.gameObject.AddComponent<Button>();
-        b.targetGraphic = face;
-        var cb = b.colors;
-        cb.highlightedColor = new Color(1.1f, 1.1f, 1.1f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f);
-        cb.fadeDuration = 0.06f;
-        b.colors = cb;
-        b.onClick.AddListener(() => onClick());
-        shadow.gameObject.AddComponent<JuicyButton>();
-        return b;
-    }
-
-    void MakeVolumeRow(RectTransform parent, string label, Vector2 pos, bool music)
-    {
-        var row = Hud.NewRect("Vol_" + label, parent, pos, new Vector2(260f, 28f));
-        Hud.Anchor(row, new Vector2(0.5f, 0.5f), pos, new Vector2(260f, 28f));
-        var t = Hud.NewText("Label", row, label, 15, Cream);
-        t.fontStyle = FontStyles.Bold;
-        t.alignment = TextAlignmentOptions.Left;
-        Hud.Anchor(t.rectTransform, new Vector2(0f, 0.5f), new Vector2(40f, 0f), new Vector2(80f, 24f));
-
-        var area = Hud.NewImage("Track", row, UISprites.RoundedRect, new Color(0.03f, 0.05f, 0.06f, 0.9f));
-        Hud.Anchor(area.rectTransform, new Vector2(1f, 0.5f), new Vector2(-88f, 0f), new Vector2(170f, 12f));
-        area.raycastTarget = true;
-        var fillArea = Hud.NewRect("FillArea", area.rectTransform, Vector2.zero, Vector2.zero);
-        Hud.Stretch(fillArea);
-        var fill = Hud.NewImage("Fill", fillArea, UISprites.RoundedRect, music ? Gold : Teal);
-        fill.rectTransform.anchorMin = Vector2.zero; fill.rectTransform.anchorMax = new Vector2(0f, 1f);
-        fill.rectTransform.offsetMin = fill.rectTransform.offsetMax = Vector2.zero;
-        var handleArea = Hud.NewRect("HandleArea", area.rectTransform, Vector2.zero, Vector2.zero);
-        Hud.Stretch(handleArea);
-        var handle = Hud.NewImage("Handle", handleArea, UISprites.Circle, Cream);
-        handle.rectTransform.sizeDelta = new Vector2(22f, 22f);
-        handle.raycastTarget = true;
-
-        var s = area.gameObject.AddComponent<Slider>();
-        s.fillRect = fill.rectTransform;
-        s.handleRect = handle.rectTransform;
-        s.targetGraphic = handle;
-        s.direction = Slider.Direction.LeftToRight;
-        s.minValue = 0f; s.maxValue = 1f;
-        s.value = GameAudio.I != null ? (music ? GameAudio.I.MusicVolume : GameAudio.I.SfxVolume) : 0.8f;
-        s.onValueChanged.AddListener(v =>
-        {
-            if (GameAudio.I == null) return;
-            if (music) GameAudio.I.MusicVolume = v;
-            else { GameAudio.I.SfxVolume = v; GameAudio.Hover(); }
+            if (GameAudio.I != null) GameAudio.I.MusicVolume = v;
             SyncSliders();
-        });
-        (music ? musicSliders : sfxSliders).Add(s);
+        }, h));
+        sfxSliders.Add(UIKit.PaintedSlider(parent, "SOUND", new Vector2(0.5f, 0.5f), soundPos, labelW, trackW, sfx, v =>
+        {
+            if (GameAudio.I != null) { GameAudio.I.SfxVolume = v; GameAudio.Hover(); }
+            SyncSliders();
+        }, h));
     }
 
     void SyncSliders()

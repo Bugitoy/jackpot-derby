@@ -32,6 +32,9 @@ public static class UISprites
     public static Sprite RoundedRect { get { if (rounded == null) rounded = MakeRounded(64, 18); return rounded; } }
     public static Sprite Circle { get { if (circle == null) circle = MakeCircle(128, 0f); return circle; } }
     public static Sprite Ring { get { if (ring == null) ring = MakeCircle(128, 18f); return ring; } }
+    static Sprite gaugeRing;
+    /// <summary>A thick ring (inner radius about two thirds of the outer) for gauge fills.</summary>
+    public static Sprite GaugeRing { get { if (gaugeRing == null) gaugeRing = MakeCircle(256, 42f); return gaugeRing; } }
     public static Sprite Triangle { get { if (triangle == null) triangle = MakeTriangle(128); return triangle; } }
 
     static Sprite glow, rays;

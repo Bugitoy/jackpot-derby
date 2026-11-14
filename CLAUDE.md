@@ -161,6 +161,10 @@ Old road game pieces (road_slab and variants) are optional decoration only.
   over cars, kill feed, storm timer, match timer.
 - Juice: hit flashes, screen shake, coin bursts, chest light beams, TAKEDOWN / WRECKED popups, LUCKY! popup.
 - Results screen: placement (1st–4th), trophy for 1st, wins counter saved with PlayerPrefs, Play Again.
+- Menu/HUD art: Lefika's painted UI pieces and concept screens are in Docs/Menu_Assets (main menu, pause,
+  How to Play). Jackpot Derby/Build Menu Art cuts them into Resources/MenuArt sprites and builds the
+  Poppins fonts (Resources/UIFonts; Poppins is SIL Open Font License, Assets/UI/Fonts/OFL.txt).
+  UIKit holds the shared builders (painted buttons, sliders, labels). Credit Poppins on the itch page.
 - Main menu: title, Play, How to Play. Stretch: a spinning Earth that zooms into the arena.
 
 ## Build order / milestones

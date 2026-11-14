@@ -112,7 +112,10 @@ public static class SceneSetup
         ModelPrefabUtil.SetField(menus, "carModel", Model("car"));
         ModelPrefabUtil.SetField(menus, "chestModel", Model("chest"));
         ModelPrefabUtil.SetField(menus, "blasterModel", Model("blaster_jackpot"));
-        ModelPrefabUtil.SetField(menus, "cloverModel", Model("clover_pickup"));
+        // The clover as the game shows it: the pickup's visual, coin base hidden.
+        var cloverPickup = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Pickups/Clover.prefab");
+        var cloverVisual = cloverPickup != null ? cloverPickup.transform.Find("Visual") : null;
+        ModelPrefabUtil.SetField(menus, "cloverModel", cloverVisual != null ? cloverVisual.gameObject : Model("clover_pickup"));
         ModelPrefabUtil.SetField(menus, "catModel", Model("black_cat"));
         ModelPrefabUtil.SetField(menus, "trophyModel", Model("trophy"));
     }

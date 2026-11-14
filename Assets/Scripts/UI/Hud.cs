@@ -4,8 +4,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The player's HUD, built in code at startup: odometer reels with padlock, hint line,
-/// big popups (TOO HIGH, LUCKY!, SMALL BLASTER!...), blaster status, and chest markers/arrows.
+/// The player's HUD, built in code at startup from Lefika's painted UI art (see UIKit): the
+/// three-reel odometer frame with its padlock and luck slot, hint line, big popups (TOO HIGH,
+/// LUCKY!, SMALL BLASTER!...), blaster status, and chest markers/arrows.
 /// </summary>
 public partial class Hud : MonoBehaviour
 {
@@ -21,7 +22,15 @@ public partial class Hud : MonoBehaviour
 
     public static Hud Instance { get; private set; }
 
-    const float DigitH = 84f;
+    const float DigitH = 74f;
+    // The odometer frame art and where its painted windows, luck slot and padlock sit (canvas units).
+    static readonly Vector2 FrameSize = new Vector2(288f, 140f);
+    static readonly float[] ReelX = { -67.8f, -8.4f, 51.3f };
+    const float ReelY = 13.3f;
+    static readonly Vector2 ReelSize = new Vector2(50f, DigitH);
+    static readonly Vector2 SlotPos = new Vector2(-6.9f, -41.7f);
+    static readonly Vector2 PadlockTop = new Vector2(125.6f, -24.4f);
+    static readonly Vector2 PadlockSize = new Vector2(41.3f, 40.8f);
 
     Canvas canvas;
     RectTransform canvasRect;
@@ -30,9 +39,9 @@ public partial class Hud : MonoBehaviour
     Odometer odometer;
     CarLoadout loadout;
 
-    RectTransform tensColumn, onesColumn;
-    Image tensWindow, onesWindow, padBody, padShackle;
-    RectTransform padShackleRect;
+    RectTransform hundredsColumn, tensColumn, onesColumn;
+    Image hundredsWindow, tensWindow, onesWindow, padlock, padGlow;
+    float padAngle, padSpin;
     TextMeshProUGUI hintLine, popupText, popupSub, cheatLine;
     RectTransform popupRect;
     float popupAge = 99f;
@@ -110,43 +119,48 @@ public partial class Hud : MonoBehaviour
         markerLayer = NewRect("Markers", canvasRect, Vector2.zero, Vector2.zero);
         Stretch(markerLayer);
 
-        // Odometer panel, bottom centre.
-        var panel = NewImage("OdometerPanel", canvasRect, UISprites.RoundedRect, panelColor);
-        Anchor(panel.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 89f), new Vector2(250f, 150f));
-        var title = NewText("Title", panel.rectTransform, "YOUR NUMBER", 15, new Color(0.75f, 0.9f, 0.88f));
-        Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(-18f, -13f), new Vector2(200f, 20f));
+        // Odometer, bottom centre: the painted three-reel frame. Reels sit in its windows, the luck
+        // pips in its lower slot, and the padlock (cut out of the art) swings from its chain.
+        var frame = UIKit.ArtImage(canvasRect, "odometer_frame", new Vector2(0.5f, 0f), new Vector2(0f, 80f), FrameSize.y, FrameSize.x);
+        var fr = frame.rectTransform;
+        // Reels sit in the painted windows (which are dark paint, not holes), inset a little so the
+        // window's rim shows round each drum.
+        var reels = NewRect("Reels", fr, Vector2.zero, FrameSize);
+        Anchor(reels, new Vector2(0.5f, 0.5f), Vector2.zero, FrameSize);
+        hundredsWindow = MakeReel(reels, new Vector2(ReelX[0], ReelY), out hundredsColumn);
+        tensWindow = MakeReel(reels, new Vector2(ReelX[1], ReelY), out tensColumn);
+        onesWindow = MakeReel(reels, new Vector2(ReelX[2], ReelY), out onesColumn);
 
-        tensWindow = MakeReel(panel.rectTransform, new Vector2(-64f, 4f), out tensColumn);
-        onesWindow = MakeReel(panel.rectTransform, new Vector2(4f, 4f), out onesColumn);
-
-        // Luck row: LUCK [] [] [] [] [] 20%
-        var luckLabel = NewText("LuckLabel", panel.rectTransform, "LUCK", 12, new Color(0.75f, 0.9f, 0.88f));
-        luckLabel.fontStyle = FontStyles.Bold;
-        Anchor(luckLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-98f, -56f), new Vector2(44f, 18f));
+        // Luck slot: LUCK [] [] [] [] [] 20%
+        var slot = NewRect("LuckSlot", fr, SlotPos, new Vector2(196f, 22f));
+        Anchor(slot, new Vector2(0.5f, 0.5f), SlotPos, new Vector2(196f, 22f));
+        var luckLabel = UIKit.Label(slot, "LUCK", 11f, gold, UIWeight.ExtraBold);
+        luckLabel.alignment = TextAlignmentOptions.Left;
+        Anchor(luckLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(30f, 0f), new Vector2(44f, 20f));
         for (int i = 0; i < luckPips.Length; i++)
         {
-            luckPips[i] = NewImage("LuckPip" + i, panel.rectTransform, UISprites.RoundedRect, new Color(1f, 1f, 1f, 0.12f));
-            Anchor(luckPips[i].rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-52f + i * 26f, -56f), new Vector2(19f, 19f));
-            luckPips[i].pixelsPerUnitMultiplier = 3.5f; // tighter corners: little dice, not coins
+            luckPips[i] = NewImage("LuckPip" + i, slot, UISprites.RoundedRect, new Color(1f, 1f, 1f, 0.12f));
+            Anchor(luckPips[i].rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-30f + i * 17f, 0f), new Vector2(13f, 12f));
+            luckPips[i].pixelsPerUnitMultiplier = 5f; // tight corners: little dice
             var dot = NewImage("Dot", luckPips[i].rectTransform, UISprites.Circle, new Color(0.15f, 0.1f, 0.05f, 0f));
-            Anchor(dot.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6f, 6f));
+            Anchor(dot.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4f, 4f));
         }
-        luckChance = NewText("LuckChance", panel.rectTransform, "", 13, new Color(0.75f, 0.9f, 0.88f));
-        luckChance.fontStyle = FontStyles.Bold;
-        Anchor(luckChance.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(100f, -56f), new Vector2(46f, 18f));
+        luckChance = UIKit.Label(slot, "", 11f, gold, UIWeight.ExtraBold);
+        luckChance.alignment = TextAlignmentOptions.Right;
+        Anchor(luckChance.rectTransform, new Vector2(1f, 0.5f), new Vector2(-28f, 0f), new Vector2(44f, 20f));
 
-        // Padlock: ring shackle behind a rounded body.
-        var pad = NewRect("Padlock", panel.rectTransform, new Vector2(84f, 6f), new Vector2(44f, 60f));
-        padShackle = NewImage("Shackle", pad, UISprites.Ring, gold);
-        padShackleRect = padShackle.rectTransform;
-        Anchor(padShackleRect, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(30f, 34f));
-        padBody = NewImage("Body", pad, UISprites.RoundedRect, gold);
-        Anchor(padBody.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(40f, 32f));
-        var keyhole = NewImage("Keyhole", padBody.rectTransform, UISprites.Circle, new Color(0.1f, 0.1f, 0.1f, 0.8f));
-        Anchor(keyhole.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(9f, 9f));
+        padGlow = NewImage("PadlockGlow", fr, UISprites.Glow, new Color(1f, 0.8f, 0.25f, 0f));
+        Anchor(padGlow.rectTransform, new Vector2(0.5f, 0.5f), PadlockTop + new Vector2(0f, -PadlockSize.y * 0.55f), PadlockSize * 2.2f);
+        padlock = NewImage("Padlock", fr, UIKit.Art("odometer_padlock"), Color.white);
+        padlock.preserveAspect = true;
+        var pr = padlock.rectTransform;
+        pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
+        pr.pivot = new Vector2(0.5f, 1f);           // hangs from the chain
+        pr.anchoredPosition = PadlockTop;
+        pr.sizeDelta = PadlockSize;
 
         hintLine = NewText("HintLine", canvasRect, "", 26, Color.white);
-        Anchor(hintLine.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 182f), new Vector2(500f, 34f));
+        Anchor(hintLine.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 172f), new Vector2(500f, 34f));
         hintLine.fontStyle = FontStyles.Bold;
         Outline(hintLine);
 
@@ -168,27 +182,31 @@ public partial class Hud : MonoBehaviour
 
     Image MakeReel(RectTransform parent, Vector2 pos, out RectTransform column)
     {
-        var window = NewImage("Reel", parent, UISprites.RoundedRect, reelColor);
-        Anchor(window.rectTransform, new Vector2(0.5f, 0.5f), pos, new Vector2(62f, DigitH));
+        var window = NewImage("Reel", parent, null, reelColor);
+        Anchor(window.rectTransform, new Vector2(0.5f, 0.5f), pos, ReelSize);
         window.gameObject.AddComponent<RectMask2D>();
-        column = NewRect("Column", window.rectTransform, Vector2.zero, new Vector2(62f, DigitH * 11));
+        column = NewRect("Column", window.rectTransform, Vector2.zero, new Vector2(ReelSize.x, DigitH * 11));
         column.anchorMin = column.anchorMax = new Vector2(0.5f, 1f);
         column.pivot = new Vector2(0.5f, 1f);
         for (int i = 0; i <= 10; i++)
         {
-            var t = NewText("D" + i, column, (i % 10).ToString(), 70, digitColor);
-            t.fontStyle = FontStyles.Bold;
+            var t = UIKit.Label(column, (i % 10).ToString(), 60f, digitColor, UIWeight.ExtraBold);
             var r = t.rectTransform;
             r.anchorMin = r.anchorMax = new Vector2(0.5f, 1f);
             r.pivot = new Vector2(0.5f, 1f);
-            r.anchoredPosition = new Vector2(0f, -i * DigitH);
-            r.sizeDelta = new Vector2(62f, DigitH);
+            r.anchoredPosition = new Vector2(0f, -i * DigitH + 3f);
+            r.sizeDelta = new Vector2(ReelSize.x, DigitH);
         }
-        // Shading strips top and bottom so it reads as a drum.
-        var top = NewImage("ShadeTop", window.rectTransform, null, new Color(0, 0, 0, 0.18f));
-        Anchor(top.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -7f), new Vector2(62f, 14f));
-        var bottom = NewImage("ShadeBottom", window.rectTransform, null, new Color(0, 0, 0, 0.18f));
-        Anchor(bottom.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 7f), new Vector2(62f, 14f));
+        // Drum shading: darker at the top and bottom where it curves away, a soft sheen in the middle.
+        for (int k = 0; k < 2; k++)
+        {
+            var shade = NewImage(k == 0 ? "ShadeTop" : "ShadeBottom", window.rectTransform, null, new Color(0.15f, 0.1f, 0.05f, 0.28f));
+            Anchor(shade.rectTransform, new Vector2(0.5f, k == 0 ? 1f : 0f), new Vector2(0f, k == 0 ? -8f : 8f), new Vector2(ReelSize.x, 16f));
+            var shade2 = NewImage("Shade2", window.rectTransform, null, new Color(0.15f, 0.1f, 0.05f, 0.16f));
+            Anchor(shade2.rectTransform, new Vector2(0.5f, k == 0 ? 1f : 0f), new Vector2(0f, k == 0 ? -20f : 20f), new Vector2(ReelSize.x, 8f));
+        }
+        var sheen = NewImage("Sheen", window.rectTransform, UISprites.Glow, new Color(1f, 1f, 1f, 0.22f));
+        Anchor(sheen.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), new Vector2(ReelSize.x * 1.4f, 34f));
         return window;
     }
 
@@ -215,13 +233,15 @@ public partial class Hud : MonoBehaviour
         else if (lastNumber == 1 && n == 99) shownValue += 99f;
         lastNumber = n;
 
-        float ones, tens;
+        float ones, tens, hundreds = 0f;
         if (spinAge >= 0f)
         {
-            // Slot-machine spin after a dice: the left reel stops first, then the right one thunks in.
+            // Slot-machine spin after a dice: reels stop left to right, the last one thunks in.
             spinAge += Time.deltaTime;
+            float tH = Mathf.Clamp01(spinAge / (spinDur * 0.45f));
             float tT = Mathf.Clamp01(spinAge / (spinDur * 0.7f)), tO = Mathf.Clamp01(spinAge / spinDur);
             int tensTo = spinTo / 10, onesTo = spinTo % 10;
+            hundreds = Mathf.Repeat(Mathf.LerpUnclamped(-10f, 0f, EaseOutBack(tH)), 10f);
             tens = Mathf.Repeat(Mathf.LerpUnclamped(tensTo - 20f, tensTo, EaseOutBack(tT)), 10f);
             ones = Mathf.Repeat(Mathf.LerpUnclamped(onesTo - 30f, onesTo, EaseOutBack(tO)), 10f);
             if (tT >= 1f && tO < 1f && spinAge - Time.deltaTime < spinDur * 0.7f) lockPunch = 0.6f;
@@ -238,19 +258,25 @@ public partial class Hud : MonoBehaviour
         }
         onesColumn.anchoredPosition = new Vector2(0f, ones * DigitH);
         tensColumn.anchoredPosition = new Vector2(0f, tens * DigitH);
+        hundredsColumn.anchoredPosition = new Vector2(0f, hundreds * DigitH);
         UpdateLuckPips();
 
         bool locked = odometer.IsLocked;
-        lockPunch = Mathf.Max(0f, lockPunch - Time.deltaTime * 4f);
+        float dt = Time.deltaTime;
+        lockPunch = Mathf.Max(0f, lockPunch - dt * 4f);
         Color w = locked ? reelLockedColor : reelColor;
-        tensWindow.color = onesWindow.color = w;
-        float s = 1f + 0.15f * Mathf.Sin(lockPunch * Mathf.PI);
-        tensWindow.rectTransform.localScale = onesWindow.rectTransform.localScale = Vector3.one * s;
+        hundredsWindow.color = tensWindow.color = onesWindow.color = w;
+        float s = 1f + 0.08f * Mathf.Sin(lockPunch * Mathf.PI);
+        foreach (var win in new[] { hundredsWindow, tensWindow, onesWindow }) win.rectTransform.localScale = new Vector3(1f, s, 1f);
 
-        padBody.color = locked ? gold : new Color(0.55f, 0.58f, 0.6f);
-        padShackle.color = padBody.color;
-        padShackleRect.anchoredPosition = locked ? new Vector2(0f, 10f) : new Vector2(7f, 18f);
-        padShackleRect.localRotation = Quaternion.Euler(0f, 0f, locked ? 0f : -20f);
+        // The padlock swings on its chain (a damped spring) and glows gold while locked.
+        float rest = locked ? 0f : 9f;
+        padSpin += ((rest - padAngle) * 120f - padSpin * 7f) * dt;
+        padAngle += padSpin * dt;
+        padlock.rectTransform.localRotation = Quaternion.Euler(0f, 0f, padAngle);
+        padlock.color = Color.Lerp(padlock.color, locked ? Color.white : new Color(0.62f, 0.62f, 0.66f), 1f - Mathf.Exp(-10f * dt));
+        float glow = locked ? 0.55f + 0.12f * Mathf.Sin(Time.time * 4f) + 0.4f * lockPunch : 0f;
+        padGlow.color = new Color(1f, 0.8f, 0.25f, Mathf.MoveTowards(padGlow.color.a, glow, dt * 3f));
     }
 
     static float EaseOutBack(float t)
@@ -296,6 +322,7 @@ public partial class Hud : MonoBehaviour
     void OnLockChanged(bool locked)
     {
         if (locked) lockPunch = 1f;
+        padSpin += locked ? -260f : 180f;   // clunk: the padlock swings as it snaps shut / falls open
         if (!locked) hintLine.text = "";
     }
 
@@ -416,6 +443,8 @@ public partial class Hud : MonoBehaviour
         var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
         go.transform.SetParent(parent, false);
         var t = go.GetComponent<TextMeshProUGUI>();
+        var poppins = UIKit.Font(UIWeight.Bold);
+        if (poppins != null) t.font = poppins;
         t.text = text;
         t.fontSize = size;
         t.color = color;
@@ -440,7 +469,9 @@ public partial class Hud : MonoBehaviour
 
     void Outline(TextMeshProUGUI t)
     {
-        if (outlinedText != null) t.fontSharedMaterial = outlinedText;
+        var m = UIKit.Outlined(t.font);
+        if (m == null) m = outlinedText;
+        if (m != null) t.fontSharedMaterial = m;
     }
 
     public static void Anchor(RectTransform r, Vector2 anchor, Vector2 pos, Vector2 size)

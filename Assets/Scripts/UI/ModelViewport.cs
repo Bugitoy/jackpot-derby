@@ -58,8 +58,9 @@ public class ModelViewport : MonoBehaviour
         foreach (var b in inst.GetComponentsInChildren<MonoBehaviour>(true)) b.enabled = false;
         SetLayer(inst.transform, layer);
 
-        // Normalize: biggest side = 1 unit, centred on the spinner.
-        var rends = inst.GetComponentsInChildren<Renderer>(true);
+        // Normalize: biggest side = 1 unit, centred on the spinner (visible parts only: e.g. the
+        // clover pickup keeps its coin base switched off).
+        var rends = inst.GetComponentsInChildren<Renderer>(false);
         if (rends.Length > 0)
         {
             Bounds bb = rends[0].bounds;

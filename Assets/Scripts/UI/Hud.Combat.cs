@@ -31,6 +31,9 @@ public partial class Hud
     // Abilities
     Image turboFill, turboBack;
     TextMeshProUGUI turboKey;
+    Image stormBanner;
+    static readonly Color StormInk = new Color(0.2f, 0.12f, 0.06f);
+    static readonly Color TurboOrange = new Color(1f, 0.55f, 0.15f);
 
     // Floating bar over each car: one bar, only while it's being hit, showing its outermost layer
     // (Jackpot cannon bar -> small blaster bar -> car health).
@@ -98,50 +101,50 @@ public partial class Hud
         flashImg = NewImage("ScreenFlash", canvasRect, null, new Color(1f, 0.9f, 0.5f, 0f));
         Stretch(flashImg.rectTransform);
 
-        // Player bars, bottom-left.
-        var panel = NewImage("PlayerBars", canvasRect, UISprites.RoundedRect, panelColor);
-        Anchor(panel.rectTransform, new Vector2(0f, 0f), new Vector2(180f, 64f), new Vector2(330f, 100f));
-        nameText = NewText("Name", panel.rectTransform, "LUCKY 7", 16, new Color(0.75f, 0.95f, 0.92f));
-        nameText.alignment = TextAlignmentOptions.Left;
-        Anchor(nameText.rectTransform, new Vector2(0f, 1f), new Vector2(110f, -14f), new Vector2(200f, 22f));
-
-        blasterRow = NewRect("BlasterRow", panel.rectTransform, Vector2.zero, Vector2.zero).gameObject;
+        // Health, bottom-left: the painted metal frame; the green bar runs in its slot.
+        var frame = UIKit.ArtImage(canvasRect, "hp_frame", new Vector2(0f, 0f), new Vector2(176f, 44f), 61f, 330f);
+        var fr = frame.rectTransform;
+        nameText = NewText("Name", fr, "", 1, Color.clear);
+        nameText.gameObject.SetActive(false);
+        blasterRow = NewRect("BlasterRow", fr, Vector2.zero, Vector2.zero).gameObject;
         var br = (RectTransform)blasterRow.transform;
-        Anchor(br, new Vector2(0.5f, 0.5f), new Vector2(0f, 6f), new Vector2(310f, 26f));
-        blasterText = NewText("BlasterLabel", br, "SMALL", 14, Color.white);
+        Anchor(br, new Vector2(0f, 1f), new Vector2(150f, 13f), new Vector2(300f, 24f));
+        blasterText = UIKit.Label(br, "", 15f, Color.white, UIWeight.ExtraBold, true);
         blasterText.alignment = TextAlignmentOptions.Left;
-        Anchor(blasterText.rectTransform, new Vector2(0f, 0.5f), new Vector2(52f, 0f), new Vector2(100f, 22f));
-        Outline(blasterText);
+        Hud.Stretch(blasterText.rectTransform);
         MakeBar(br, new Vector2(54f, 0f), new Vector2(196f, 16f), GoldBar, out blasterFill, out blasterFillImg);
 
-        var hpRow = NewRect("HpRow", panel.rectTransform, Vector2.zero, Vector2.zero);
-        Anchor(hpRow, new Vector2(0.5f, 0.5f), new Vector2(0f, -26f), new Vector2(310f, 30f));
-        var hpLabel = NewText("HpLabel", hpRow, "HP", 18, Color.white);
-        hpLabel.fontStyle = FontStyles.Bold;
-        Anchor(hpLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(26f, 0f), new Vector2(40f, 24f));
-        Outline(hpLabel);
-        MakeBar(hpRow, new Vector2(30f, 0f), new Vector2(200f, 22f), HpGreen, out hpFill, out hpFillImg);
-        hpText = NewText("HpValue", hpRow, "100", 18, Color.white);
-        hpText.fontStyle = FontStyles.Bold;
-        Anchor(hpText.rectTransform, new Vector2(1f, 0.5f), new Vector2(-24f, 0f), new Vector2(50f, 24f));
-        Outline(hpText);
+        var hpLabel = UIKit.Label(fr, "HP", 25f, UIKit.Cream, UIWeight.ExtraBold, true);
+        Anchor(hpLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-126f, 0f), new Vector2(50f, 34f));
+        var slot = NewRect("HpSlot", fr, Vector2.zero, Vector2.zero);
+        Anchor(slot, new Vector2(0.5f, 0.5f), new Vector2(-5.6f, -2.4f), new Vector2(164f, 12f));
+        hpFillImg = NewImage("Fill", slot, UISprites.RoundedRect, HpGreen);
+        hpFillImg.pixelsPerUnitMultiplier = 3f;
+        hpFill = hpFillImg.rectTransform;
+        hpFill.anchorMin = Vector2.zero; hpFill.anchorMax = Vector2.one;
+        hpFill.pivot = new Vector2(0f, 0.5f);
+        hpFill.offsetMin = hpFill.offsetMax = Vector2.zero;
+        var shine = NewImage("Shine", hpFill, null, new Color(1f, 1f, 1f, 0.28f));
+        shine.rectTransform.anchorMin = new Vector2(0f, 0.55f);
+        shine.rectTransform.anchorMax = new Vector2(1f, 0.85f);
+        shine.rectTransform.offsetMin = new Vector2(3f, 0f);
+        shine.rectTransform.offsetMax = new Vector2(-3f, 0f);
+        hpText = UIKit.Label(fr, "100", 25f, UIKit.Cream, UIWeight.ExtraBold, true);
+        Anchor(hpText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(122f, 0f), new Vector2(64f, 34f));
 
-        // Ability icons, bottom-right.
-        MakeAbility(new Vector2(-80f, 72f), "TURBO", "SHIFT", TealBar, out turboBack, out turboFill, out turboKey, out _);
+        // Turbo, bottom-right: the painted gauge; its dark ring fills as Turbo recharges.
+        BuildTurboGauge(new Vector2(-80f, 74f), 142f);
 
-        // Top: timer + cars left.
-        timerText = NewText("MatchTimer", canvasRect, "0:00", 34, Color.white);
-        timerText.fontStyle = FontStyles.Bold;
-        Anchor(timerText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -28f), new Vector2(200f, 40f));
-        Outline(timerText);
-        carsLeftText = NewText("CarsLeft", canvasRect, "", 16, new Color(1f, 1f, 1f, 0.85f));
-        Anchor(carsLeftText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -56f), new Vector2(240f, 22f));
-        Outline(carsLeftText);
+        // Top: the timer screen with cars left, and the storm warning banner under it.
+        var timerFrame = UIKit.ArtImage(canvasRect, "timer_screen", new Vector2(0.5f, 1f), new Vector2(0f, -46f), 82f, 168f);
+        timerText = UIKit.Label(timerFrame.rectTransform, "0:00", 38f, UIKit.Cream, UIWeight.ExtraBold, true);
+        Anchor(timerText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 9f), new Vector2(160f, 46f));
+        carsLeftText = UIKit.Label(timerFrame.rectTransform, "", 14f, UIKit.Cream, UIWeight.Bold, true);
+        Anchor(carsLeftText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -20f), new Vector2(160f, 20f));
 
-        stormText = NewText("StormTimer", canvasRect, "", 17, new Color(0.85f, 0.65f, 1f));
-        stormText.fontStyle = FontStyles.Bold;
-        Anchor(stormText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(320f, 22f));
-        Outline(stormText);
+        stormBanner = UIKit.ArtImage(canvasRect, "storm_banner", new Vector2(0.5f, 1f), new Vector2(0f, -112f), 38f, 290f);
+        stormText = UIKit.Label(stormBanner.rectTransform, "", 15f, StormInk, UIWeight.ExtraBold);
+        Anchor(stormText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(17f, 1f), new Vector2(240f, 30f));
         stormOverlay = NewImage("StormOverlay", canvasRect, UISprites.Vignette, new Color(0.12f, 0.10f, 0.20f, 0f));
         Stretch(stormOverlay.rectTransform);
         stormOverlay.rectTransform.SetSiblingIndex(0);
@@ -183,6 +186,25 @@ public partial class Hud
         fill.gameObject.SetActive(fraction > 0.005f);
     }
 
+    /// <summary>
+    /// The painted Turbo gauge. A thick ring overlays the dial's dark track: radial fill over the
+    /// 270 degrees from bottom-left round the top to bottom-right (the SHIFT plate sits in the gap).
+    /// </summary>
+    void BuildTurboGauge(Vector2 pos, float size)
+    {
+        turboBack = UIKit.ArtImage(canvasRect, "turbo_dial", new Vector2(1f, 0f), pos, size);
+        turboBack.preserveAspect = true;
+        turboFill = NewImage("TurboArc", turboBack.rectTransform, UISprites.GaugeRing, TurboOrange);
+        Anchor(turboFill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.01f), Vector2.one * size * 0.83f);
+        turboFill.type = Image.Type.Filled;
+        turboFill.fillMethod = Image.FillMethod.Radial360;
+        turboFill.fillOrigin = (int)Image.Origin360.Bottom;
+        turboFill.fillClockwise = true;
+        turboFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -45f);
+        var label = UIKit.Label(turboBack.rectTransform, "TURBO", size * 0.1f, TealBar, UIWeight.ExtraBold, true);
+        Anchor(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.03f), new Vector2(size * 0.6f, size * 0.2f));
+    }
+
     void MakeAbility(Vector2 pos, string icon, string key, Color color, out Image back, out Image fill, out TextMeshProUGUI keyText, out TextMeshProUGUI iconText)
     {
         back = NewImage("Ability_" + icon, canvasRect, UISprites.Circle, BarBack);
@@ -210,9 +232,8 @@ public partial class Hud
         dim.raycastTarget = true;
         resultsPanel = dim.gameObject;
 
-        var card = NewImage("Card", dim.rectTransform, UISprites.RoundedRect, new Color(0.08f, 0.16f, 0.18f, 0.97f));
+        var card = UIKit.ArtImage(dim.rectTransform, "card", new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), 360f, 640f);
         resultsCard = card.rectTransform;
-        Anchor(resultsCard, new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(620f, 360f));
         resultsTitle = NewText("Title", resultsCard, "1ST PLACE!", 64, GoldBar);
         resultsTitle.fontStyle = FontStyles.Bold;
         Anchor(resultsTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(540f, 80f));
@@ -346,7 +367,7 @@ public partial class Hud
         {
             int secs = Mathf.FloorToInt(mm.MatchTime);
             timerText.text = $"{secs / 60}:{secs % 60:00}";
-            carsLeftText.text = mm.State == MatchState.Countdown ? "GET READY" : $"CARS LEFT  {mm.CarsLeft}";
+            carsLeftText.text = mm.State == MatchState.Countdown ? "GET READY" : $"CARS LEFT: {mm.CarsLeft}";
             if (mm.ResultsVisible)
             {
                 resultsAge += Time.unscaledDeltaTime;
@@ -378,8 +399,10 @@ public partial class Hud
     void UpdateStormUI(float dt)
     {
         var storm = StormController.Instance;
-        if (storm == null) { stormText.text = ""; return; }
-        if (storm.IsShrinking) stormText.text = "BAD LUCK STORM CLOSING IN!";
+        if (storm == null) { stormText.text = ""; stormBanner.gameObject.SetActive(false); return; }
+        stormBanner.gameObject.SetActive(true);
+        stormText.color = storm.IsShrinking ? new Color(0.55f, 0.07f, 0.05f) : StormInk;
+        if (storm.IsShrinking) stormText.text = "STORM CLOSING IN!";
         else if (storm.TimeToNextShrink > 0f)
         {
             int s = Mathf.CeilToInt(storm.TimeToNextShrink);
@@ -387,6 +410,7 @@ public partial class Hud
         }
         else stormText.text = "FINAL STORM ZONE";
         stormText.alpha = storm.IsShrinking ? 0.7f + 0.3f * Mathf.Sin(Time.time * 8f) : 1f;
+        stormBanner.rectTransform.localScale = Vector3.one * (storm.IsShrinking ? 1f + 0.03f * Mathf.Sin(Time.time * 8f) : 1f);
 
         bool outside = pHealth != null && pHealth.IsAlive && !storm.IsInside(player.transform.position, 0f);
         // A soft dark vignette; the StormVolume (faded by StormController) does the desaturation.
@@ -409,8 +433,6 @@ public partial class Hud
         bool armed = loadout != null && loadout.IsArmed;
         bool jackpot = armed && loadout.Tier == BlasterTier.Jackpot;
         blasterFill.parent.gameObject.SetActive(false);
-        blasterText.rectTransform.sizeDelta = new Vector2(260f, 22f);
-        blasterText.rectTransform.anchoredPosition = new Vector2(132f, 0f);
         blasterText.text = !armed ? "NO BLASTER - find a chest!" : jackpot ? "JACKPOT CANNON" : "SMALL BLASTER";
         blasterText.color = !armed ? new Color(0.75f, 0.75f, 0.75f) : jackpot ? GoldBar : TealBar;
     }
@@ -419,10 +441,12 @@ public partial class Hud
     {
         if (pTurbo != null)
         {
-            turboFill.fillAmount = pTurbo.IsActive ? pTurbo.ActiveLeft / 2f : pTurbo.Readiness;
-            float pulse = pTurbo.IsReady ? 1f + 0.05f * Mathf.Sin(Time.time * 5f) : 1f;
-            turboBack.rectTransform.localScale = Vector3.one * (pTurbo.IsActive ? 1.12f : pulse);
-            turboFill.color = pTurbo.IsReady || pTurbo.IsActive ? TealBar : new Color(0.3f, 0.5f, 0.5f);
+            // 0.75 = the full 270-degree arc.
+            turboFill.fillAmount = 0.75f * (pTurbo.IsActive ? pTurbo.ActiveLeft / 2f : pTurbo.Readiness);
+            float pulse = pTurbo.IsReady ? 1f + 0.04f * Mathf.Sin(Time.time * 5f) : 1f;
+            turboBack.rectTransform.localScale = Vector3.one * (pTurbo.IsActive ? 1.1f : pulse);
+            Color c = pTurbo.IsActive ? TealBar : pTurbo.IsReady ? Color.Lerp(TurboOrange, new Color(1f, 0.85f, 0.35f), 0.5f + 0.5f * Mathf.Sin(Time.time * 5f)) : new Color(0.7f, 0.36f, 0.12f, 0.85f);
+            turboFill.color = c;
         }
     }
 
@@ -574,11 +598,10 @@ public partial class Hud
         resultsPanel.SetActive(true);
         if (resultsButtons.childCount == 0 && Menus.Instance != null)
         {
-            var ink = new Color(0.14f, 0.09f, 0.04f);
-            Menus.Instance.MakeButton(resultsButtons, "PLAY AGAIN", GoldBar, ink, new Vector2(-105f, 0f), new Vector2(280f, 70f), 32,
-                () => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); }, "press ENTER");
-            Menus.Instance.MakeButton(resultsButtons, "MAIN MENU", TealBar, ink, new Vector2(165f, -4f), new Vector2(200f, 54f), 22,
-                () => { if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu(); });
+            UIKit.PaintedButton(resultsButtons, "btn_yellow_big", "PLAY AGAIN", new Color(0.16f, 0.1f, 0.03f), new Vector2(0.5f, 0.5f), new Vector2(-100f, 0f),
+                new Vector2(290f, 82f), 34f, () => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); }, "press ENTER");
+            UIKit.PaintedButton(resultsButtons, "btn_teal_big", "MAIN MENU", new Color(0.04f, 0.17f, 0.2f), new Vector2(0.5f, 0.5f), new Vector2(170f, -4f),
+                new Vector2(210f, 62f), 24f, () => { if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu(); });
         }
         bool trophy = placement == 1 && Menus.Instance != null;
         if (trophy && resultsTrophy == null)
