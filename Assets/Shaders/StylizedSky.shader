@@ -9,6 +9,9 @@ Shader "JackpotDerby/StylizedSky"
         _ZenithColor ("Zenith", Color) = (0.24, 0.46, 0.84, 1)
         _HorizonColor ("Horizon", Color) = (0.76, 0.85, 0.93, 1)
         _GroundColor ("Below Horizon", Color) = (0.62, 0.66, 0.70, 1)
+        _MidColor ("Middle Band", Color) = (0.96, 0.88, 0.74, 1)
+        _MidPoint ("Middle Band Height (0 = off)", Range(0, 0.9)) = 0
+        _HorizonAwayColor ("Horizon Away From Sun", Color) = (0.76, 0.85, 0.93, 1)
         _GradientPower ("Gradient Power", Range(0.1, 2)) = 0.55
         _HorizonHaze ("Horizon Haze", Range(0, 1)) = 0.55
         _HazeFalloff ("Haze Falloff", Range(1, 40)) = 12
@@ -49,7 +52,8 @@ Shader "JackpotDerby/StylizedSky"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _ZenithColor, _HorizonColor, _GroundColor;
+                half4 _ZenithColor, _HorizonColor, _GroundColor, _MidColor, _HorizonAwayColor;
+                float _MidPoint;
                 float _GradientPower, _HorizonHaze, _HazeFalloff, _Bands, _BandSoftness, _ToonSun;
                 half4 _SunRingColor;
                 float4 _SunDir;
@@ -117,9 +121,21 @@ Shader "JackpotDerby/StylizedSky"
                     float b = g * _Bands;
                     g = (floor(b) + smoothstep(0.5 - _BandSoftness, 0.5 + _BandSoftness, frac(b))) / _Bands;
                 }
-                float3 sky = lerp(_HorizonColor.rgb, _ZenithColor.rgb, g);
+                // The horizon is warm toward the sun and cooler (rose/lilac) on the far side.
                 float towardSun = saturate(cosSun * 0.5 + 0.5);
-                sky = lerp(sky, sky * _SunColor.rgb * 1.08, towardSun * towardSun * 0.35);
+                float3 horizon = lerp(_HorizonAwayColor.rgb, _HorizonColor.rgb, smoothstep(0.0, 1.0, towardSun));
+                float3 sky;
+                if (_MidPoint > 0.001)
+                {
+                    // Three stops: horizon -> middle band -> zenith.
+                    float3 low = lerp(horizon, _MidColor.rgb, saturate(g / _MidPoint));
+                    sky = lerp(low, _ZenithColor.rgb, saturate((g - _MidPoint) / (1.0 - _MidPoint)));
+                }
+                else
+                {
+                    sky = lerp(horizon, _ZenithColor.rgb, g);
+                    sky = lerp(sky, sky * _SunColor.rgb * 1.08, towardSun * towardSun * 0.35);
+                }
                 sky = lerp(sky, _GroundColor.rgb, saturate(-h * 6.0));
 
                 // Sun glow (wide halo + tighter bloom around the disk).
@@ -163,7 +179,7 @@ Shader "JackpotDerby/StylizedSky"
 
                 // Haze band at the horizon, matching the fog colour.
                 float haze = exp(-abs(h) * _HazeFalloff) * _HorizonHaze;
-                sky = lerp(sky, _HorizonColor.rgb, haze * (1.0 - disk));
+                sky = lerp(sky, horizon, haze * (1.0 - disk));
 
                 return half4(sky, 1.0);
             }

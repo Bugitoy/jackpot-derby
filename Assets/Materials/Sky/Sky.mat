@@ -26,28 +26,31 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _BandSoftness: 0.18
-    - _Bands: 4
+    - _BandSoftness: 0.2
+    - _Bands: 5
     - _CloudCoverage: 0.48
     - _CloudOpacity: 0
     - _CloudScale: 1.6
     - _CloudSoftness: 0.22
     - _CloudSpeed: 0.012
-    - _GlowIntensity: 0.3
-    - _GradientPower: 0.7
+    - _GlowIntensity: 0.55
+    - _GradientPower: 0.6
     - _HazeFalloff: 12
-    - _HorizonHaze: 0.35
-    - _SunIntensity: 1.6
-    - _SunSize: 0.0016
+    - _HorizonHaze: 0.3
+    - _MidPoint: 0.32
+    - _SunIntensity: 1.5
+    - _SunSize: 0.0018
     - _ToonSun: 1
     m_Colors:
     - _CloudLit: {r: 1, g: 0.98999995, b: 0.96, a: 1}
     - _CloudShade: {r: 0.6, g: 0.67, b: 0.78, a: 1}
-    - _GroundColor: {r: 0.62, g: 0.65999997, b: 0.7, a: 1}
-    - _HorizonColor: {r: 0.68, g: 0.88, b: 0.98, a: 1}
-    - _SunColor: {r: 1, g: 0.96, b: 0.72, a: 1}
-    - _SunDir: {r: 0.617887, g: 0.27563736, b: -0.73636925, a: 0}
-    - _SunRingColor: {r: 1, g: 0.97, b: 0.82, a: 1}
-    - _ZenithColor: {r: 0.18, g: 0.5, b: 0.96, a: 1}
+    - _GroundColor: {r: 0.8, g: 0.68, b: 0.62, a: 1}
+    - _HorizonAwayColor: {r: 0.86, g: 0.72, b: 0.78, a: 1}
+    - _HorizonColor: {r: 1, g: 0.78, b: 0.58, a: 1}
+    - _MidColor: {r: 0.96, g: 0.88, b: 0.74, a: 1}
+    - _SunColor: {r: 1, g: 0.9, b: 0.62, a: 1}
+    - _SunDir: {r: 0.62874115, g: 0.2079117, b: -0.74930453, a: 0}
+    - _SunRingColor: {r: 1, g: 0.86, b: 0.62, a: 1}
+    - _ZenithColor: {r: 0.33, g: 0.6, b: 0.7, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -20,15 +20,16 @@ public static class LookSetup
         if (light == null) light = new GameObject("Directional Light").AddComponent<Light>();
         light.type = LightType.Directional;
         light.transform.rotation = Quaternion.Euler(SunElevation, SunAzimuth, 0f);
-        light.intensity = 1.55f;
-        light.color = new Color(1f, 0.93f, 0.80f);
+        // Golden afternoon: a warm, lower sun; cool teal sky light fills the shadows.
+        light.intensity = 1.45f;
+        light.color = new Color(1f, 0.82f, 0.58f);
         light.shadows = LightShadows.Soft;
-        light.shadowStrength = 0.65f;
+        light.shadowStrength = 0.6f;
 
         RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.78f, 0.84f, 0.92f);
-        RenderSettings.ambientEquatorColor = new Color(0.70f, 0.68f, 0.62f);
-        RenderSettings.ambientGroundColor = new Color(0.42f, 0.38f, 0.32f);
+        RenderSettings.ambientSkyColor = new Color(0.60f, 0.70f, 0.78f);
+        RenderSettings.ambientEquatorColor = new Color(0.88f, 0.74f, 0.62f);
+        RenderSettings.ambientGroundColor = new Color(0.46f, 0.37f, 0.31f);
 
         var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
         if (profile == null)
@@ -63,13 +64,16 @@ public static class LookSetup
 
         // Sky: atmosphere gradient, sun and drifting clouds. The fog uses the sky's horizon colour and
         // stays thin, so only far-off buildings fade (aerial perspective), not the whole view.
-        // Cartoon palette: a clear saturated blue overhead, a bright minty-blue horizon.
-        Color horizon = new Color(0.68f, 0.88f, 0.98f);
+        // Golden-afternoon palette: peach glow toward the sun, rose-lilac on the far side; the haze
+        // is the warm cream in between, so the distant city melts into the horizon.
+        Color horizon = new Color(1.00f, 0.78f, 0.58f);
+        Color horizonAway = new Color(0.86f, 0.72f, 0.78f);
+        Color haze = new Color(0.95f, 0.80f, 0.68f);
         RenderSettings.sun = light;
-        RenderSettings.skybox = SkyMaterial(light, horizon);
+        RenderSettings.skybox = SkyMaterial(light, horizon, horizonAway);
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogColor = horizon;
+        RenderSettings.fogColor = haze;
         RenderSettings.fogDensity = 0.0052f;
 
         var cam = Camera.main;
@@ -81,7 +85,7 @@ public static class LookSetup
             // The storm mist softens against the depth buffer.
             data.requiresDepthOption = CameraOverrideOption.On;
             cam.clearFlags = CameraClearFlags.Skybox;
-            cam.backgroundColor = horizon;
+            cam.backgroundColor = haze;
         }
 
         BuildSkyClouds(light);
@@ -115,15 +119,15 @@ public static class LookSetup
         AssetDatabase.SaveAssets();
     }
 
-    const float SunElevation = 46f, SunAzimuth = -40f;
+    const float SunElevation = 32f, SunAzimuth = -40f;
     /// <summary>
     /// The sun drawn in the sky sits lower than the light that casts the shadows (same compass
     /// direction), so the low chase camera actually gets to see it; real-height shadows stay short.
     /// </summary>
-    const float SkySunElevation = 16f;
+    const float SkySunElevation = 12f;
     const string SkyPath = "Assets/Materials/Sky/Sky.mat";
 
-    static Material SkyMaterial(Light light, Color horizon)
+    static Material SkyMaterial(Light light, Color horizon, Color horizonAway)
     {
         ModelPrefabUtil.EnsureFolder("Assets/Materials/Sky");
         var shader = Shader.Find("JackpotDerby/StylizedSky");
@@ -136,18 +140,23 @@ public static class LookSetup
         m.SetColor("_SunColor", light.color);
         // Cartoon look: soft painted bands instead of a smooth realistic gradient, no noise clouds
         // (the cloud models replace them), and a flat sun disk with a pale ring.
-        m.SetColor("_ZenithColor", new Color(0.18f, 0.50f, 0.96f));
-        m.SetFloat("_GradientPower", 0.7f);
-        m.SetFloat("_Bands", 4f);
-        m.SetFloat("_BandSoftness", 0.18f);
-        m.SetFloat("_HorizonHaze", 0.35f);
+        // Golden afternoon: soft teal overhead, a warm cream band, then the peach / rose horizon.
+        m.SetColor("_ZenithColor", new Color(0.33f, 0.60f, 0.70f));
+        m.SetColor("_MidColor", new Color(0.96f, 0.88f, 0.74f));
+        m.SetFloat("_MidPoint", 0.32f);
+        m.SetColor("_HorizonAwayColor", horizonAway);
+        m.SetColor("_GroundColor", new Color(0.80f, 0.68f, 0.62f));
+        m.SetFloat("_GradientPower", 0.6f);
+        m.SetFloat("_Bands", 5f);
+        m.SetFloat("_BandSoftness", 0.2f);
+        m.SetFloat("_HorizonHaze", 0.3f);
         m.SetFloat("_CloudOpacity", 0f);
         m.SetFloat("_ToonSun", 1f);
-        m.SetColor("_SunColor", new Color(1f, 0.96f, 0.72f));
-        m.SetColor("_SunRingColor", new Color(1f, 0.97f, 0.82f));
-        m.SetFloat("_SunSize", 0.0016f);
-        m.SetFloat("_SunIntensity", 1.6f);
-        m.SetFloat("_GlowIntensity", 0.3f);
+        m.SetColor("_SunColor", new Color(1f, 0.90f, 0.62f));
+        m.SetColor("_SunRingColor", new Color(1f, 0.86f, 0.62f));
+        m.SetFloat("_SunSize", 0.0018f);
+        m.SetFloat("_SunIntensity", 1.5f);
+        m.SetFloat("_GlowIntensity", 0.55f);
         EditorUtility.SetDirty(m);
         return m;
     }
@@ -171,7 +180,12 @@ public static class LookSetup
         if (mat == null) { mat = new Material(shader); AssetDatabase.CreateAsset(mat, matPath); }
         mat.shader = shader;
         mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Scenery/Textures/cloud.png"));
-        mat.SetColor("_ShadeColor", new Color(0.70f, 0.80f, 0.97f));
+        // Peach on the sunny side, lilac in the shade, a golden rim.
+        mat.SetColor("_Tint", new Color(1f, 0.92f, 0.84f));
+        // Backlit clouds (looking toward the sun) show their shade side: keep it rosy, not grey.
+        mat.SetColor("_ShadeColor", new Color(0.90f, 0.74f, 0.80f));
+        mat.SetColor("_RimColor", new Color(1f, 0.86f, 0.62f));
+        mat.SetFloat("_RimStrength", 0.5f);
         EditorUtility.SetDirty(mat);
 
         var root = new GameObject("SkyClouds").transform;
