@@ -377,7 +377,8 @@ public class Menus : MonoBehaviour
         var t = UIKit.Label(cr, title, title.Length > 14 ? 22f : 26f, titleColor, UIWeight.ExtraBold);
         Hud.Anchor(t.rectTransform, new Vector2(0f, 1f), new Vector2(textLeft + textW * 0.5f, -42f), new Vector2(textW + 30f, 34f));
 
-        body = body.Replace("<b>", "<color=#FFC93A><font=\"Poppins-Bold SDF\">").Replace("</b>", "</font></color>");
+        // Highlighted words: gold and bold (the Medium font's bold weight is real Poppins Bold).
+        body = body.Replace("<b>", "<color=#FFC93A><b>").Replace("</b>", "</b></color>");
         var b = UIKit.Label(cr, body, 15.5f, new Color(0.93f, 0.92f, 0.88f), UIWeight.Medium);
         b.richText = true;
         b.alignment = TextAlignmentOptions.TopLeft;

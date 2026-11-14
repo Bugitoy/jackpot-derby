@@ -269,5 +269,15 @@ public static class MenuArtBuilder
             EditorUtility.SetDirty(m);
             log.Append($"font {weight} ok ({fa.characterTable.Count} chars) ");
         }
+
+        // <b> in Medium text (the How to Play cards) draws real Poppins Bold, not a faux bold.
+        // Saved in the font asset, so it works without any runtime font lookup.
+        var medium = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"{FontDir}/Poppins-Medium SDF.asset");
+        var bold = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"{FontDir}/Poppins-Bold SDF.asset");
+        if (medium != null && bold != null)
+        {
+            medium.fontWeightTable[7].regularTypeface = bold;   // edits the asset's own table in place
+            EditorUtility.SetDirty(medium);
+        }
     }
 }

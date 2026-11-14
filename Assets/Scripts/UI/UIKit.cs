@@ -32,12 +32,7 @@ public static class UIKit
         if (!fonts.TryGetValue(w, out var f) || f == null)
         {
             fonts[w] = f = Resources.Load<TMP_FontAsset>($"UIFonts/Poppins-{w} SDF");
-            if (f != null && !outlined.ContainsKey(f))
-            {
-                outlined[f] = Resources.Load<Material>($"UIFonts/Poppins-{w} Outlined");
-                // So rich text can switch weight mid-line: <font="Poppins-Bold SDF">.
-                MaterialReferenceManager.AddFontAsset(f);
-            }
+            if (f != null && !outlined.ContainsKey(f)) outlined[f] = Resources.Load<Material>($"UIFonts/Poppins-{w} Outlined");
         }
         return f;
     }
