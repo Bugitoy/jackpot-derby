@@ -241,11 +241,23 @@ public static class ArenaBuilder
         }
     }
 
+    /// <summary>Height of a park's lawn top: it sits a little above the sidewalk ring, like the centre island.</summary>
+    const float ParkLawnTop = 0.16f;
+    /// <summary>Lawn width as a share of the tile; the rest is the sidewalk ring round it.</summary>
+    const float ParkLawnShare = 0.84f;
+
     static void BuildPark(Transform parent, Vector3 p, float t, string id)
     {
+        // Same look as the centre island: a sidewalk ring (flush with the block sidewalks next to it)
+        // round a slightly raised lawn. Visual only, no colliders, so the park stays drivable open ground.
+        var walk = Box(parent, $"ParkSidewalk_{id}", p + Vector3.up * 0.06f, new Vector3(t, 0.12f, t), SidewalkMat(), false);
+        walk.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
         // Soft sage-teal lawn that sits with the palette (the raw grass texture was too loud).
-        Flat(parent, $"Park_{id}", p + Vector3.up * 0.02f, t, t, 0f, TexMat("ParkLawn", "tex_grass", new Color(0.62f, 0.78f, 0.62f), 1.5f));
-        ScatterGrass(parent, p, t * 0.42f, 8);
+        var lawn = Box(parent, $"Park_{id}", p + Vector3.up * (ParkLawnTop * 0.5f), new Vector3(t * ParkLawnShare, ParkLawnTop, t * ParkLawnShare),
+                       TexMat("ParkLawn", "tex_grass", new Color(0.62f, 0.78f, 0.62f), 1.5f), false);
+        lawn.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+        p += Vector3.up * ParkLawnTop;   // everything below stands on the lawn
+        ScatterGrass(parent, p, t * 0.38f, 8);
         Place(parent, "bush_large", p + new Vector3(-t * 0.36f, 0, (float)(rand.NextDouble() - 0.5) * t * 0.5f), (float)rand.NextDouble() * 360f);
         Place(parent, "tree_planter", p + new Vector3((float)(rand.NextDouble() - 0.5) * t * 0.5f, 0, t * 0.36f), (float)rand.NextDouble() * 360f);
         int trees = 1 + rand.Next(0, 2);
