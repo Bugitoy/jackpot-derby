@@ -302,9 +302,9 @@ public class Menus : MonoBehaviour
         logo = logoImg.rectTransform;
 
         var tag = UIKit.Label(r, "Roll your lucky number.  Crack the chests.  Be the last car standing.", 22f, UIKit.Cream, UIWeight.Bold, true);
-        Hud.Anchor(tag.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -292f), new Vector2(1100f, 34f));
+        Hud.Anchor(tag.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0f), new Vector2(1100f, 34f));
 
-        UIKit.PaintedButton(r, "btn_yellow_big", "PLAY", InkYellow, new Vector2(0.5f, 0f), new Vector2(0f, 232f), new Vector2(306f, 98f), 50f, Play, "press ENTER");
+        UIKit.PaintedButton(r, "btn_yellow_big", "PLAY", InkYellow, new Vector2(0.5f, 0f), new Vector2(0f, 232f), new Vector2(306f, 98f), 50f, Play);
         UIKit.PaintedButton(r, "btn_teal_big", "HOW TO PLAY", InkTeal, new Vector2(0.5f, 0f), new Vector2(0f, 141f), new Vector2(264f, 70f), 29f, () => OpenHowTo(Page.Title));
 
         var plaque = UIKit.ArtImage(r, "plaque", new Vector2(0.5f, 0f), new Vector2(0f, 58f), 48f);

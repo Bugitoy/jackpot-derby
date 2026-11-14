@@ -37,7 +37,101 @@ public static class UISprites
     public static Sprite GaugeRing { get { if (gaugeRing == null) gaugeRing = MakeCircle(256, 42f); return gaugeRing; } }
     public static Sprite Triangle { get { if (triangle == null) triangle = MakeTriangle(128); return triangle; } }
 
-    static Sprite glow, rays;
+    static Sprite glow, rays, turboArc, hubRing, turboArcGlow;
+
+    /// <summary>A wide, soft band of orange light that spills past the Turbo channel's edges (same arc layout as TurboArc).</summary>
+    public static Sprite TurboArcGlow
+    {
+        get
+        {
+            if (turboArcGlow != null) return turboArcGlow;
+            const int size = 128;
+            var tex = NewTex(size);
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float g = Mathf.Exp(-Mathf.Pow((r - 0.78f) / 0.14f, 2f));     // soft bell round the channel's middle
+                px[y * size + x] = new Color(1f, 0.62f, 0.2f, g);
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            turboArcGlow = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return turboArcGlow;
+        }
+    }
+
+    /// <summary>
+    /// The Turbo gauge's glowing channel (as in the pause concept): a band from 64% to 98% of the
+    /// radius, bright yellow at its inner edge through orange to deep red-orange at the outer edge,
+    /// soft at both edges, and brighter along the arc towards its leading end. The arc runs clockwise
+    /// from the bottom of the texture, matching an Image radial fill with origin Bottom.
+    /// </summary>
+    public static Sprite TurboArc
+    {
+        get
+        {
+            if (turboArc != null) return turboArc;
+            const int size = 256;
+            var tex = NewTex(size);
+            var px = new Color32[size * size];
+            Color hot = new Color(1f, 0.97f, 0.78f), yellow = new Color(1f, 0.8f, 0.3f), orange = new Color(1f, 0.54f, 0.12f), deep = new Color(0.82f, 0.26f, 0.05f);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float u = (r - 0.64f) / 0.34f;
+                if (u < 0f || u > 1f) { px[y * size + x] = new Color32(0, 0, 0, 0); continue; }
+                float edge = Mathf.SmoothStep(0f, 1f, u / 0.1f) * Mathf.SmoothStep(0f, 1f, (1f - u) / 0.22f);
+                // Hot white-yellow at the inner edge, orange through the middle, deep red-orange at the rim.
+                Color c = u < 0.25f ? Color.Lerp(hot, yellow, u / 0.25f)
+                        : u < 0.6f ? Color.Lerp(yellow, orange, (u - 0.25f) / 0.35f)
+                        : Color.Lerp(orange, deep, (u - 0.6f) / 0.4f);
+                float ang = Mathf.Atan2(-dx, -dy) * Mathf.Rad2Deg;        // clockwise from the bottom
+                if (ang < 0f) ang += 360f;
+                float along = Mathf.Clamp01(ang / 270f);
+                c *= Mathf.Lerp(0.85f, 1.05f, along);
+                // Light, not paint: see-through enough for the dial's tick marks, strongest at the hot inner edge.
+                float a = edge * Mathf.Lerp(0.66f, 0.84f, along) * Mathf.Lerp(1.08f, 0.82f, u);
+                px[y * size + x] = new Color(Mathf.Clamp01(c.r), Mathf.Clamp01(c.g), Mathf.Clamp01(c.b), a);
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            turboArc = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return turboArc;
+        }
+    }
+
+    /// <summary>A thin soft ring that fades along its length like a comet's tail (spun round the Turbo hub).</summary>
+    public static Sprite HubRing
+    {
+        get
+        {
+            if (hubRing != null) return hubRing;
+            const int size = 128;
+            var tex = NewTex(size);
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float band = 1f - Mathf.Abs(r - 0.86f) / 0.1f;
+                if (band <= 0f) { px[y * size + x] = new Color32(0, 0, 0, 0); continue; }
+                float ang = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                if (ang < 0f) ang += 360f;
+                float tail = Mathf.Pow(ang / 360f, 1.6f);
+                px[y * size + x] = new Color(1f, 1f, 1f, Mathf.SmoothStep(0f, 1f, band) * Mathf.Lerp(0.08f, 1f, tail));
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            hubRing = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            return hubRing;
+        }
+    }
 
     /// <summary>Soft radial glow, bright in the middle fading to nothing.</summary>
     public static Sprite Glow

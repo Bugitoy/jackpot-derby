@@ -29,7 +29,9 @@ public partial class Hud
     TurboAbility pTurbo;
 
     // Abilities
-    Image turboFill, turboBack;
+    Image turboFill, turboBack, turboTip, turboTipGlow, turboHub, turboHubGlow, turboSpill;
+    TextMeshProUGUI turboLabel;
+    float turboRadius, hubSpin;
     TextMeshProUGUI turboKey;
     Image stormBanner;
     static readonly Color StormInk = new Color(0.2f, 0.12f, 0.06f);
@@ -194,15 +196,42 @@ public partial class Hud
     {
         turboBack = UIKit.ArtImage(canvasRect, "turbo_dial", new Vector2(1f, 0f), pos, size);
         turboBack.preserveAspect = true;
-        turboFill = NewImage("TurboArc", turboBack.rectTransform, UISprites.GaugeRing, TurboOrange);
-        Anchor(turboFill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.01f), Vector2.one * size * 0.83f);
+        var dial = turboBack.rectTransform;
+        turboRadius = size * 0.5f;
+
+        // Light in the dial's channel: a soft spill of light first, then the painted gradient arc
+        // (a little see-through so the dial's tick marks still show), filling from bottom-left round the top.
+        turboSpill = NewImage("TurboArcSpill", dial, UISprites.TurboArcGlow, new Color(1f, 1f, 1f, 0.5f));
+        Anchor(turboSpill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.01f), Vector2.one * size * 0.9f);
+        turboSpill.type = Image.Type.Filled;
+        turboSpill.fillMethod = Image.FillMethod.Radial360;
+        turboSpill.fillOrigin = (int)Image.Origin360.Bottom;
+        turboSpill.fillClockwise = true;
+        turboSpill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -45f);
+        turboFill = NewImage("TurboArc", dial, UISprites.TurboArc, Color.white);
+        Anchor(turboFill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.01f), Vector2.one * size * 0.857f);
         turboFill.type = Image.Type.Filled;
         turboFill.fillMethod = Image.FillMethod.Radial360;
         turboFill.fillOrigin = (int)Image.Origin360.Bottom;
         turboFill.fillClockwise = true;
         turboFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -45f);
-        var label = UIKit.Label(turboBack.rectTransform, "TURBO", size * 0.1f, TealBar, UIWeight.ExtraBold, true);
-        Anchor(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.03f), new Vector2(size * 0.6f, size * 0.2f));
+
+        // Hot spot at the leading edge of the light: a soft glow with a bright streak in it.
+        turboTipGlow = NewImage("TurboTipGlow", dial, UISprites.Glow, new Color(1f, 0.85f, 0.4f, 0.6f));
+        turboTipGlow.rectTransform.anchorMin = turboTipGlow.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        turboTipGlow.rectTransform.sizeDelta = Vector2.one * size * 0.36f;
+        turboTip = NewImage("TurboTip", dial, UISprites.Glow, new Color(1f, 0.97f, 0.75f, 0.95f));
+        turboTip.rectTransform.anchorMin = turboTip.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        turboTip.rectTransform.sizeDelta = new Vector2(size * 0.08f, size * 0.3f);
+
+        // Cyan ring of light round the hub, and the TURBO lettering glowing inside it.
+        turboHubGlow = NewImage("TurboHubGlow", dial, UISprites.Glow, new Color(0.3f, 0.9f, 1f, 0.35f));
+        Anchor(turboHubGlow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.02f), Vector2.one * size * 0.62f);
+        turboHub = NewImage("TurboHubRing", dial, UISprites.HubRing, new Color(0.35f, 0.95f, 1f, 1f));
+        Anchor(turboHub.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.02f), Vector2.one * size * 0.5f);
+        turboLabel = UIKit.Label(dial, "TURBO", size * 0.1f, new Color(0.82f, 1f, 1f), UIWeight.SemiBold);
+        turboLabel.characterSpacing = 2f;
+        Anchor(turboLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, size * 0.02f), new Vector2(size * 0.6f, size * 0.2f));
     }
 
     void MakeAbility(Vector2 pos, string icon, string key, Color color, out Image back, out Image fill, out TextMeshProUGUI keyText, out TextMeshProUGUI iconText)
@@ -441,12 +470,42 @@ public partial class Hud
     {
         if (pTurbo != null)
         {
+            float dt = Time.deltaTime, t = Time.time;
+            bool active = pTurbo.IsActive, ready = pTurbo.IsReady;
             // 0.75 = the full 270-degree arc.
-            turboFill.fillAmount = 0.75f * (pTurbo.IsActive ? pTurbo.ActiveLeft / 2f : pTurbo.Readiness);
-            float pulse = pTurbo.IsReady ? 1f + 0.04f * Mathf.Sin(Time.time * 5f) : 1f;
-            turboBack.rectTransform.localScale = Vector3.one * (pTurbo.IsActive ? 1.1f : pulse);
-            Color c = pTurbo.IsActive ? TealBar : pTurbo.IsReady ? Color.Lerp(TurboOrange, new Color(1f, 0.85f, 0.35f), 0.5f + 0.5f * Mathf.Sin(Time.time * 5f)) : new Color(0.7f, 0.36f, 0.12f, 0.85f);
-            turboFill.color = c;
+            float fill = 0.75f * (active ? pTurbo.ActiveLeft / 2f : pTurbo.Readiness);
+            turboFill.fillAmount = fill;
+            float pulse = ready ? 1f + 0.035f * Mathf.Sin(t * 5f) : 1f;
+            turboBack.rectTransform.localScale = Vector3.one * (active ? 1.08f : pulse);
+
+            // The light: dimmer while recharging, glowing and breathing when ready, flaring while active.
+            float glow = active ? 0.9f + 0.1f * Mathf.Sin(t * 30f) : ready ? 0.92f + 0.08f * Mathf.Sin(t * 5f) : 0.86f;
+            turboFill.color = new Color(1f, glow, glow, 1f);
+            turboSpill.fillAmount = fill;
+            turboSpill.color = new Color(1f, 1f, 1f, active ? 0.75f + 0.2f * Mathf.Sin(t * 30f) : ready ? 0.5f + 0.15f * Mathf.Sin(t * 5f) : 0.4f);
+
+            // Streak at the leading edge, while the arc is part-full.
+            bool showTip = fill > 0.01f && fill < 0.749f;
+            turboTip.enabled = turboTipGlow.enabled = showTip;
+            if (showTip)
+            {
+                float a = (45f + fill * 360f) * Mathf.Deg2Rad;              // clockwise from the bottom
+                Vector2 dir = new Vector2(-Mathf.Sin(a), -Mathf.Cos(a));
+                Vector2 p = dir * turboRadius * 0.69f + new Vector2(0f, turboRadius * 0.02f);
+                turboTip.rectTransform.anchoredPosition = p;
+                turboTip.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f);
+                turboTip.color = new Color(1f, 0.97f, 0.75f, 0.8f + 0.2f * Mathf.Sin(t * 12f));
+                turboTipGlow.rectTransform.anchoredPosition = p - dir * turboRadius * 0.04f;
+                turboTipGlow.color = new Color(1f, 0.85f, 0.4f, 0.5f + 0.15f * Mathf.Sin(t * 9f));
+            }
+
+            // Cyan hub ring: idles slowly while recharging, turns when ready, whirls while active.
+            hubSpin += dt * (active ? 720f : ready ? 120f : 30f);
+            turboHub.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -hubSpin);
+            float hubA = active ? 1f : ready ? 0.85f + 0.15f * Mathf.Sin(t * 5f) : 0.35f;
+            turboHub.color = new Color(0.35f, 0.95f, 1f, hubA);
+            turboHubGlow.color = new Color(0.3f, 0.9f, 1f, hubA * 0.4f);
+            turboLabel.color = new Color(0.82f, 1f, 1f, 0.55f + 0.45f * hubA);
         }
     }
 
@@ -599,7 +658,7 @@ public partial class Hud
         if (resultsButtons.childCount == 0 && Menus.Instance != null)
         {
             UIKit.PaintedButton(resultsButtons, "btn_yellow_big", "PLAY AGAIN", new Color(0.16f, 0.1f, 0.03f), new Vector2(0.5f, 0.5f), new Vector2(-100f, 0f),
-                new Vector2(290f, 82f), 34f, () => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); }, "press ENTER");
+                new Vector2(290f, 82f), 34f, () => { if (MatchManager.Instance != null) MatchManager.Instance.PlayAgain(); });
             UIKit.PaintedButton(resultsButtons, "btn_teal_big", "MAIN MENU", new Color(0.04f, 0.17f, 0.2f), new Vector2(0.5f, 0.5f), new Vector2(170f, -4f),
                 new Vector2(210f, 62f), 24f, () => { if (MatchManager.Instance != null) MatchManager.Instance.BackToMenu(); });
         }
