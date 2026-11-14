@@ -121,6 +121,8 @@ grid with a garage in each corner and the Bad Luck Storm clouds around the edge.
   scattered on flat roofs so repeats don't look identical.
 - Centre: plaza / roundabout with **lucky_tower** as the landmark. Place casino, lantern_gate, fortune_booth
   and other landmarks so each district is recognizable.
+- Parked cars on the arena streets roll forward/back along their length when rammed (PushableVehicle,
+  set up by PushableSetup; carving NavMeshObstacles, left out of the NavMesh bake).
 - Street clutter for cover: parked cars, wrecks, dumpsters, trash cans, pallets, tires, drums, crates,
   barriers, fences, benches, kiosks, phone booths, plants, bushes, trees, utility poles, lamps, lights.
 - Leave open squares and parking lots for chests and dogfights; every garage needs two exit routes.

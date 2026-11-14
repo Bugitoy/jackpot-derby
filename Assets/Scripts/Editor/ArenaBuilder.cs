@@ -192,7 +192,7 @@ public static class ArenaBuilder
             double roll = rand.NextDouble();
             Vector3 basePos = p + across * side * (t * 0.36f) + along * (float)(rand.NextDouble() - 0.5) * t * 0.4f;
             float faceYaw = (alongZ ? 0f : 90f) + (rand.Next(2) == 0 ? 0f : 180f);
-            if (roll < 0.28) Place(props, Pick(ShoulderPool), basePos, faceYaw);
+            if (roll < 0.28) PushableSetup.Make(Place(props, Pick(ShoulderPool), basePos, faceYaw)); // rolls when rammed
             else if (roll < 0.36) Place(props, Pick(ClutterPool), basePos, faceYaw + (float)rand.NextDouble() * 30f);
         }
     }

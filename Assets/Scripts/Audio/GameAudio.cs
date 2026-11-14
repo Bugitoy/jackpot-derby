@@ -316,6 +316,13 @@ public class GameAudio : MonoBehaviour
         I.Play(I.Bank.chestBonk, player ? (Vector3?)null : pos, player ? 0.7f : 0.45f, 1f, 0.05f, 0.15f);
     }
 
+    /// <summary>A car shoving a parked car: a lower, softer crunch than a car-on-car ram.</summary>
+    public static void Bump(Vector3 pos, float strength01)
+    {
+        if (I == null || I.Bank == null) return;
+        I.Play(I.Bank.ram, pos, Mathf.Lerp(0.3f, 0.7f, strength01), 0.78f, 0.06f, 0.1f, 3);
+    }
+
     public static void Click() { if (I != null && I.Bank != null) I.Play(I.Bank.uiClick, null, 0.6f, 1f, 0.03f, 0.03f, 2, true); }
     public static void Hover() { if (I != null && I.Bank != null) I.Play(I.Bank.uiHover, null, 0.35f, 1f, 0.03f, 0.04f, 2, true); }
 }
