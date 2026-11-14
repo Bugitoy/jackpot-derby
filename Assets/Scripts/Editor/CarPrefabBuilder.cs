@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -66,8 +67,8 @@ public static class CarPrefabBuilder
         var mount = new GameObject("BlasterMount").transform;
         mount.SetParent(visual, false);
         mount.localPosition = new Vector3(0f, body.max.y - 0.08f, roofCentre.z);
-        var small = BlasterVisual("BlasterSmall", "Assets/Models/blaster_small.glb", mount, SmallBlasterSize);
-        var jackpot = BlasterVisual("BlasterJackpot", "Assets/Models/blaster_jackpot.glb", mount, JackpotBlasterSize);
+        var small = BlasterVisual("BlasterSmall", "Assets/Models/blaster_small.glb", mount, SmallBlasterSize, out var smallTurret);
+        var jackpot = BlasterVisual("BlasterJackpot", "Assets/Models/blaster_jackpot.glb", mount, JackpotBlasterSize, out var jackpotTurret);
 
         root.AddComponent<CarMotor>();
         root.AddComponent<CarVisualTilt>();
@@ -81,6 +82,8 @@ public static class CarPrefabBuilder
         ModelPrefabUtil.SetField(loadout, "smallBlasterVisual", small);
         ModelPrefabUtil.SetField(loadout, "jackpotBlasterVisual", jackpot);
         ModelPrefabUtil.SetField(loadout, "mount", mount);
+        ModelPrefabUtil.SetField(loadout, "smallTurret", smallTurret);
+        ModelPrefabUtil.SetField(loadout, "jackpotTurret", jackpotTurret);
         ModelPrefabUtil.SetArray(loadout, "roofCargo", cargo.ToArray());
 
         var id = root.AddComponent<CarIdentity>();
@@ -151,7 +154,7 @@ public static class CarPrefabBuilder
         return parts;
     }
 
-    static GameObject BlasterVisual(string name, string modelPath, Transform mount, float size)
+    static GameObject BlasterVisual(string name, string modelPath, Transform mount, float size, out Transform turret)
     {
         var holder = new GameObject(name);
         holder.transform.SetParent(mount, false);
@@ -163,8 +166,56 @@ public static class CarPrefabBuilder
             Vector3 baseCentre = BottomSliceCentre(model, 0.15f) - holder.transform.position;
             model.transform.localPosition -= new Vector3(baseCentre.x, 0f, baseCentre.z);
         }
+
+        // Only the cannon swivels: everything except the flat platform it sits on goes under a
+        // "Turret" pivot at the base plate's centre (the holder origin), which AutoBlaster turns.
+        turret = new GameObject("Turret").transform;
+        turret.SetParent(holder.transform, false);
+        if (model != null) SplitPlatform(model, holder.transform, turret);
         holder.SetActive(false);
         return holder;
+    }
+
+    /// <summary>
+    /// Move the cannon parts of a blaster model under the turret pivot, leaving the platform (wide,
+    /// flat parts in the bottom 30% of the model) fixed to the roof.
+    /// </summary>
+    static void SplitPlatform(GameObject model, Transform holder, Transform turret)
+    {
+        // The GLB comes in as a prefab instance, whose children can't be re-parented: unpack it
+        // (meshes and materials still point at the GLB's assets).
+        if (PrefabUtility.IsPartOfPrefabInstance(model))
+            PrefabUtility.UnpackPrefabInstance(PrefabUtility.GetOutermostPrefabInstanceRoot(model), PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        var renderers = model.GetComponentsInChildren<MeshRenderer>(true);
+        var parts = new List<(Transform t, Bounds b)>();
+        Bounds all = new Bounds();
+        bool any = false;
+        foreach (var r in renderers)
+        {
+            Bounds b = LocalBounds(r, holder);
+            parts.Add((r.transform, b));
+            if (!any) { all = b; any = true; } else all.Encapsulate(b);
+        }
+        if (!any) return;
+        float baseTop = all.min.y + all.size.y * 0.3f;
+        foreach (var p in parts)
+        {
+            bool platform = p.b.max.y <= baseTop && p.b.size.x >= all.size.x * 0.35f && p.b.size.z >= all.size.z * 0.35f;
+            if (!platform) p.t.SetParent(turret, true);
+        }
+    }
+
+    /// <summary>A renderer's mesh bounds in another transform's local space.</summary>
+    static Bounds LocalBounds(MeshRenderer r, Transform space)
+    {
+        var mf = r.GetComponent<MeshFilter>();
+        Bounds mb = mf != null && mf.sharedMesh != null ? mf.sharedMesh.bounds : new Bounds();
+        Matrix4x4 m = space.worldToLocalMatrix * r.transform.localToWorldMatrix;
+        Bounds b = new Bounds(m.MultiplyPoint3x4(mb.center), Vector3.zero);
+        for (int i = 0; i < 8; i++)
+            b.Encapsulate(m.MultiplyPoint3x4(mb.center + Vector3.Scale(mb.extents,
+                new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1))));
+        return b;
     }
 
     /// <summary>World-space centre (x/z extents) of the vertices in the lowest `fraction` of the model's height.</summary>

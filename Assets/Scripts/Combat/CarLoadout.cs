@@ -13,11 +13,16 @@ public class CarLoadout : MonoBehaviour
     [SerializeField] GameObject smallBlasterVisual;
     [SerializeField] GameObject jackpotBlasterVisual;
     [SerializeField] Transform mount;
+    [Tooltip("The swivelling cannon part of each blaster (the platform under it stays fixed).")]
+    [SerializeField] Transform smallTurret;
+    [SerializeField] Transform jackpotTurret;
     [Tooltip("Roof rack + luggage parts of the car model. Shown when unarmed, hidden while a blaster is mounted.")]
     [SerializeField] GameObject[] roofCargo;
 
     public BlasterTier Tier { get; private set; }
     public Transform Mount => mount;
+    /// <summary>The fitted blaster's cannon pivot (null when unarmed).</summary>
+    public Transform Turret => Tier == BlasterTier.Small ? smallTurret : Tier == BlasterTier.Jackpot ? jackpotTurret : null;
     public bool IsArmed => Tier != BlasterTier.None;
 
     public event Action<BlasterTier> TierChanged;

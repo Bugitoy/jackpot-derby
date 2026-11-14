@@ -80,10 +80,12 @@ public class AutoBlaster : MonoBehaviour
         }
         turretYaw = Mathf.MoveTowardsAngle(turretYaw, desired, turretTurnSpeed * dt);
         recoil = Mathf.MoveTowards(recoil, 0f, dt * 4f);
-        if (loadout.Mount != null)
+        // Only the cannon swivels and kicks back; its platform stays fixed to the roof.
+        var turret = loadout.Turret;
+        if (turret != null)
         {
-            loadout.Mount.localRotation = Quaternion.Euler(0f, turretYaw, 0f);
-            loadout.Mount.localScale = new Vector3(1f + recoil * 0.25f, 1f - recoil * 0.2f, 1f + recoil * 0.25f);
+            turret.localRotation = Quaternion.Euler(0f, turretYaw, 0f);
+            turret.localScale = new Vector3(1f + recoil * 0.25f, 1f - recoil * 0.2f, 1f + recoil * 0.25f);
         }
 
         cooldown -= dt * FireRateMultiplier;
@@ -135,7 +137,7 @@ public class AutoBlaster : MonoBehaviour
 
     Vector3 MuzzlePosition()
     {
-        Transform m = loadout.Mount != null ? loadout.Mount : transform;
+        Transform m = loadout.Turret != null ? loadout.Turret : loadout.Mount != null ? loadout.Mount : transform;
         return m.position + m.forward * 1.0f + Vector3.up * 0.45f;
     }
 
