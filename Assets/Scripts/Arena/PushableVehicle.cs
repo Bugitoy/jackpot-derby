@@ -3,7 +3,8 @@ using UnityEngine;
 /// <summary>
 /// A parked car left in neutral: ram it and it rolls forward or backward along its length, then
 /// slows to a stop on rolling resistance. Its tyres grip sideways, so it never slides sideways or
-/// spins. Bumps make a thud and a puff of dust.
+/// spins. Its wheels (the WheelPivots the scenery prefab carries) roll with it.
+/// Bumps make a thud and a puff of dust.
 /// Set up by the PushableSetup editor script (Rigidbody, frictionless collider, NavMeshObstacle).
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
@@ -19,8 +20,37 @@ public class PushableVehicle : MonoBehaviour
 
     Rigidbody rb;
     float lastBump = -1f;
+    Transform[] wheels = new Transform[0];
+    float wheelRadius = 0.5f, wheelAngle;
+    Vector3 lastPos;
 
-    void Awake() => rb = GetComponent<Rigidbody>();
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+        lastPos = transform.position;
+        var holder = transform.Find("Wheels");
+        if (holder == null) return;
+        var list = new System.Collections.Generic.List<Transform>();
+        foreach (Transform pivot in holder) if (pivot.name == "WheelPivot") list.Add(pivot);
+        wheels = list.ToArray();
+        var far = wheels.Length > 0 ? wheels[0].Find("WheelFar") : null;
+        var mf = far != null ? far.GetComponent<MeshFilter>() : null;
+        if (mf != null && mf.sharedMesh != null) wheelRadius = Mathf.Max(0.1f, mf.sharedMesh.bounds.size.y * 0.5f * transform.lossyScale.y);
+    }
+
+    void LateUpdate()
+    {
+        if (wheels.Length == 0) return;
+        // Turn by the distance actually rolled (exact even when frames are slow or uneven).
+        Vector3 p = transform.position;
+        float along = Vector3.Dot(p - lastPos, transform.forward);
+        lastPos = p;
+        if (Mathf.Abs(along) < 1e-4f) return;
+        // Rolling forward turns the wheels about the car's +X axis (top moving forward).
+        wheelAngle = (wheelAngle + along / wheelRadius * Mathf.Rad2Deg) % 360f;
+        var r = Quaternion.AngleAxis(wheelAngle, Vector3.right);
+        foreach (var w in wheels) w.localRotation = r;
+    }
 
     void FixedUpdate()
     {

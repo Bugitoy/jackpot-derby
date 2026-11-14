@@ -134,6 +134,8 @@ public static class ArenaBuilder
 
         BuildBoundary(walls, w * t, h * t);
         BuildOuterCity(outside, t);
+        // Parked cars can land on a bench or hydrant poking off the sidewalk: slide them clear.
+        PushableSetup.ResolveOverlaps(grid);
 
         foreach (var group in new[] { ground, roads })
             SetStaticRecursive(group.gameObject);
