@@ -1729,7 +1729,6 @@ GameObject:
   m_Component:
   - component: {fileID: 3018731987110337025}
   - component: {fileID: 8334111582363446985}
-  - component: {fileID: 4614658094681611245}
   - component: {fileID: 4106679401525551448}
   - component: {fileID: 6754216939341440452}
   - component: {fileID: 5793157889179334123}
@@ -1743,6 +1742,7 @@ GameObject:
   - component: {fileID: 4610810635188583311}
   - component: {fileID: 7288699282322594083}
   - component: {fileID: 805530653824672512}
+  - component: {fileID: 7545612597996143122}
   m_Layer: 8
   m_Name: PlayerCar
   m_TagString: Untagged
@@ -1794,29 +1794,6 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 80
   m_CollisionDetection: 3
---- !u!136 &4614658094681611245
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3709413630201919833}
-  m_Material: {fileID: 13400000, guid: c6aaeae55701d084c95ff7c4821d2dc6, type: 2}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 1.1682912
-  m_Height: 3.9199998
-  m_Direction: 2
-  m_Center: {x: 0, y: 1.1682912, z: 0}
 --- !u!114 &4106679401525551448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2061,6 +2038,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCarInput
   steerSpeed: 8
   steerReturnSpeed: 12
+--- !u!65 &7545612597996143122
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3709413630201919833}
+  m_Material: {fileID: 13400000, guid: c6aaeae55701d084c95ff7c4821d2dc6, type: 2}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.46357, y: 2.4, z: 3.9192681}
+  m_Center: {x: -0.00000011920929, y: 1.2, z: -0.0003733635}
 --- !u!1 &3717278331617607809
 GameObject:
   m_ObjectHideFlags: 0

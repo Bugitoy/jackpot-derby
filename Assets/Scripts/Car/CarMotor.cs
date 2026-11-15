@@ -55,6 +55,9 @@ public class CarMotor : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        // Extra solver passes keep pile-ups (car -> parked car -> wall) from shaking or sinking in.
+        rb.solverIterations = 12;
+        rb.solverVelocityIterations = 4;
         input = GetComponent<CarInputSource>();
         lastGroundedPosition = transform.position;
     }

@@ -191,7 +191,9 @@ public static class PushableSetup
         // Can turn about Y (an off-centre hit swings it round) but never tips or leaves the ground.
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionY;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+        // Speculative CCD: shoved at up to 16 u/s it would otherwise sink into thin lamp posts and pop out.
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        rb.maxDepenetrationVelocity = 4f;      // settle overlaps gently instead of popping
 
         if (go.GetComponent<PushableVehicle>() == null) go.AddComponent<PushableVehicle>();
 
