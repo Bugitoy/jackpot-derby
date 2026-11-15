@@ -357,12 +357,13 @@ public static class ArenaBuilder
         Object.DestroyImmediate(mc);
     }
 
-    // ---------- roof props vs Mesh LODs ----------
+    // ---------- roof props: whole base on flat roof, steady across Mesh LODs ----------
 
-    /// <summary>How far (units) a lighter building LOD may move the roof under a rooftop prop.</summary>
+    /// <summary>How far (units) the roof under a prop's base may vary: across the base, and between LODs.</summary>
+    const float RoofFlatTolerance = 0.25f;
     const float RoofLodTolerance = 0.3f;
 
-    [MenuItem("Jackpot Derby/Fix Roof Props For LODs")]
+    [MenuItem("Jackpot Derby/Fix Roof Props")]
     static void FixRoofPropsMenu()
     {
         var grid = Object.FindAnyObjectByType<ArenaGrid>();
@@ -372,16 +373,22 @@ public static class ArenaBuilder
     }
 
     /// <summary>
-    /// Rooftop props are placed on the full-detail roof. Far away a building draws a lighter Mesh LOD,
-    /// and on some spots (ledges, small roof features) the simplified roof sits up to several units
-    /// lower or higher, leaving the prop floating or sunk. This moves every prop whose spot isn't
-    /// stable across all of its building's LODs to a spot on the same roof that is (or removes it if
-    /// the roof has none). Uses its own random numbers so the rest of the arena stays as built.
+    /// Makes every rooftop prop (AC units, vents, antennas, water towers, billboards, neon signs) stand
+    /// properly on its roof:
+    ///  * its WHOLE base rests on flat roof at one height: no legs hanging off the edge, no balancing
+    ///    on a chimney, ridge or sloped tiles, nothing of the building poking up through it
+    ///    (DressRoof only ever checked the single point under the prop's centre);
+    ///  * that roof stays put on every lighter Mesh LOD of the building (simplified roofs can sink or
+    ///    rise by several units on ledges, which left props floating a few blocks away);
+    ///  * it doesn't overlap another rooftop prop.
+    /// A prop that fails is moved to a spot on the same roof that passes, or deleted if there's none.
+    /// Uses its own random numbers so the rest of the arena stays as built. Run by Build Arena.
     /// </summary>
     public static void FixRoofPropsForLods(Transform arenaRoot)
     {
         var roofNames = new HashSet<string>(RoofPool);
-        roofNames.UnionWith(SignPool);
+        var signNames = new HashSet<string>(SignPool);
+        roofNames.UnionWith(signNames);
         var buildings = new List<MeshFilter>();
         var items = new List<MeshFilter>();
         foreach (var mf in arenaRoot.GetComponentsInChildren<MeshFilter>())
@@ -396,7 +403,7 @@ public static class ArenaBuilder
         var mc = probe.AddComponent<MeshCollider>();
         var rng = new System.Random(4242);
         int moved = 0, removed = 0;
-        // Footprints of the props kept so far (XZ centre, radius, height), so none end up overlapping.
+        // Footprints of the props kept so far, so none end up overlapping.
         var placed = new List<(Vector3 pos, float radius)>();
         bool Free(Vector3 at, float r)
         {
@@ -415,31 +422,44 @@ public static class ArenaBuilder
                     Bounds bb = b.GetComponent<Renderer>().bounds;
                     if (p.x > bb.min.x && p.x < bb.max.x && p.z > bb.min.z && p.z < bb.max.z && Mathf.Abs(bb.max.y - p.y) < 8f) { bld = b; break; }
                 }
-                if (bld == null) continue;
+                if (bld == null) { Undo.DestroyObjectImmediate(item.gameObject); removed++; continue; }
                 if (!lodCache.TryGetValue(bld.sharedMesh, out var lods)) lodCache[bld.sharedMesh] = lods = LodMeshes(bld.sharedMesh);
                 probe.transform.SetPositionAndRotation(bld.transform.position, bld.transform.rotation);
                 probe.transform.localScale = bld.transform.lossyScale;
-                // Footprint from the prefab's own mesh (world AABBs of turned props are too loose).
-                Vector3 size = Vector3.Scale(item.sharedMesh.bounds.size, item.transform.lossyScale);
-                float radius = Mathf.Min(size.x, size.z) * 0.25f;
-                float spacing = Mathf.Max(size.x, size.z) * 0.45f;
-                if (RoofSpotStable(mc, lods, p, radius) && Free(p, spacing)) { placed.Add((p, spacing)); continue; }
-
-                // Look for a stable flat spot on the same roof (same rules as DressRoof).
                 Bounds wb = bld.GetComponent<Renderer>().bounds;
-                Bounds mb = bld.sharedMesh.bounds;
-                bool found = false;
-                for (int attempt = 0; attempt < 60 && !found; attempt++)
+                float top = wb.max.y + 5f;
+                Vector3 size = Vector3.Scale(item.sharedMesh.bounds.size, item.transform.lossyScale);
+                float spacing = Mathf.Max(size.x, size.z) * 0.5f;
+                Quaternion rot = item.transform.rotation;
+
+                if (RoofSpotOk(mc, lods, item, p, rot, top, out float y) && Free(p, spacing))
                 {
-                    Vector3 local = new Vector3((float)(rng.NextDouble() - 0.5) * 0.6f, 0, (float)(rng.NextDouble() - 0.5) * 0.6f);
+                    if (Mathf.Abs(y - p.y) > 0.01f)
+                    {
+                        Undo.RecordObject(item.transform, "Fix roof prop");
+                        item.transform.position = new Vector3(p.x, y, p.z);
+                    }
+                    placed.Add((item.transform.position, spacing));
+                    continue;
+                }
+
+                // Look for a spot on the same roof where the whole base fits. Signs keep facing the
+                // street; units and towers may turn.
+                Bounds mb = bld.sharedMesh.bounds;
+                bool sign = signNames.Contains(item.sharedMesh.name);
+                bool found = false;
+                for (int attempt = 0; attempt < 150 && !found; attempt++)
+                {
+                    Vector3 local = new Vector3((float)(rng.NextDouble() - 0.5) * 0.8f, 0, (float)(rng.NextDouble() - 0.5) * 0.8f);
                     Vector3 o = bld.transform.TransformPoint(mb.center + Vector3.Scale(local, mb.size));
                     mc.sharedMesh = lods[0];
-                    if (!mc.Raycast(new Ray(new Vector3(o.x, wb.max.y + 5f, o.z), Vector3.down), out RaycastHit hit, wb.size.y + 10f)) continue;
+                    if (!mc.Raycast(new Ray(new Vector3(o.x, top, o.z), Vector3.down), out RaycastHit hit, top - wb.min.y + 1f)) continue;
                     if (hit.normal.y < 0.96f || hit.point.y < wb.min.y + wb.size.y * 0.55f) continue;
-                    if (!Free(hit.point, spacing) || !RoofSpotStable(mc, lods, hit.point, radius)) continue;
+                    Quaternion r = sign ? rot : Quaternion.Euler(0f, rng.Next(4) * 90f + rot.eulerAngles.y, 0f);
+                    if (!Free(hit.point, spacing) || !RoofSpotOk(mc, lods, item, hit.point, r, top, out float fy)) continue;
                     Undo.RecordObject(item.transform, "Fix roof prop");
-                    item.transform.position = hit.point;
-                    placed.Add((hit.point, spacing));
+                    item.transform.SetPositionAndRotation(new Vector3(hit.point.x, fy, hit.point.z), r);
+                    placed.Add((item.transform.position, spacing));
                     found = true;
                 }
                 if (found) moved++;
@@ -451,31 +471,59 @@ public static class ArenaBuilder
             Object.DestroyImmediate(probe);
             foreach (var kv in lodCache) foreach (var m in kv.Value) Object.DestroyImmediate(m);
         }
-        Debug.Log($"[ArenaBuilder] Roof props checked against building LODs: {items.Count} props, {moved} moved, {removed} removed.");
+        Debug.Log($"[ArenaBuilder] Roof props checked: {items.Count} props, {moved} moved, {removed} removed.");
     }
 
-    /// <summary>The prop's footprint (centre and four points) stays within tolerance of the full-detail roof on every LOD.</summary>
-    static bool RoofSpotStable(MeshCollider mc, Mesh[] lods, Vector3 p, float radius)
+    /// <summary>
+    /// Points under a prop's base: a 4 x 4 grid over its footprint (slightly inset), in world space.
+    /// </summary>
+    static List<Vector3> BasePoints(MeshFilter item, Vector3 pos, Quaternion rot)
     {
-        var offsets = new[] { Vector3.zero, new Vector3(radius, 0, 0), new Vector3(-radius, 0, 0), new Vector3(0, 0, radius), new Vector3(0, 0, -radius) };
-        var baseY = new float[offsets.Length];
+        Bounds b = item.sharedMesh.bounds;
+        Vector3 s = item.transform.lossyScale;
+        var pts = new List<Vector3>();
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
+            {
+                float u = Mathf.Lerp(-0.45f, 0.45f, i / 3f), v = Mathf.Lerp(-0.45f, 0.45f, j / 3f);
+                Vector3 local = new Vector3((b.center.x + u * b.size.x) * s.x, 0f, (b.center.z + v * b.size.z) * s.z);
+                pts.Add(pos + rot * local);
+            }
+        return pts;
+    }
+
+    /// <summary>
+    /// The prop's whole base lies on flat, level roof (first surface hit from above everywhere under
+    /// it, facing up, all within tolerance), and that roof holds on every Mesh LOD. y = where to stand it.
+    /// </summary>
+    static bool RoofSpotOk(MeshCollider mc, Mesh[] lods, MeshFilter item, Vector3 pos, Quaternion rot, float top, out float y)
+    {
+        y = pos.y;
+        var pts = BasePoints(item, pos, rot);
+        var baseY = new float[pts.Count];
         mc.sharedMesh = lods[0];
-        for (int i = 0; i < offsets.Length; i++) baseY[i] = RoofY(mc, p + offsets[i]);
-        if (baseY[0] < -50f) return false;
+        float lo = float.MaxValue, hi = float.MinValue;
+        for (int i = 0; i < pts.Count; i++)
+        {
+            if (!mc.Raycast(new Ray(new Vector3(pts[i].x, top, pts[i].z), Vector3.down), out RaycastHit hit, 200f)) return false;
+            if (hit.normal.y < 0.94f) return false;
+            baseY[i] = hit.point.y;
+            lo = Mathf.Min(lo, baseY[i]);
+            hi = Mathf.Max(hi, baseY[i]);
+        }
+        if (hi - lo > RoofFlatTolerance) return false;
+        y = hi;
         for (int lod = 1; lod < lods.Length; lod++)
         {
             mc.sharedMesh = lods[lod];
-            for (int i = 0; i < offsets.Length; i++)
+            for (int i = 0; i < pts.Count; i++)
             {
-                if (baseY[i] < -50f) continue;
-                if (Mathf.Abs(RoofY(mc, p + offsets[i]) - baseY[i]) > RoofLodTolerance) return false;
+                float ly = mc.Raycast(new Ray(new Vector3(pts[i].x, top, pts[i].z), Vector3.down), out RaycastHit hit, 200f) ? hit.point.y : -99f;
+                if (Mathf.Abs(ly - baseY[i]) > RoofLodTolerance) return false;
             }
         }
         return true;
     }
-
-    static float RoofY(MeshCollider mc, Vector3 p)
-        => mc.Raycast(new Ray(new Vector3(p.x, p.y + 30f, p.z), Vector3.down), out RaycastHit hit, 80f) ? hit.point.y : -99f;
 
     /// <summary>One plain mesh per Mesh LOD level (same vertices, that level's triangles) for collision tests.</summary>
     static Mesh[] LodMeshes(Mesh mesh)
