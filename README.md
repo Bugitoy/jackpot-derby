@@ -1,3 +1,5 @@
+<p align="center"><img src="Docs/itch/banner.png" alt="Jackpot Derby banner" width="100%"></p>
+
 # Jackpot Derby
 
 A lucky-number car brawl made for the **Unity Game Jam 2026** (theme: *Lucky Number*).
@@ -7,6 +9,17 @@ Four cars in a cartoon city. Every car's number is its **odometer**, rolling lik
 it drives. Chests drop in with a hidden lucky number: stop to lock your number and get a TOO HIGH /
 TOO LOW / CLOSE hint, then ram the chest with a close enough number to win a blaster that fires on
 its own. A Bad Luck Storm shrinks the arena. **Last car standing wins.**
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Title screen](Docs/readme/title.jpg) | ![Driving through the city, odometer rolling](Docs/readme/driving.jpg) |
+| **Title screen** | **Your number rolls as you drive** |
+| ![Close to a Jackpot chest](Docs/readme/chest_close.jpg) | ![Locked number: WAY TOO HIGH](Docs/readme/number_hint.jpg) |
+| **Stop to lock it: CLOSE to the chest's number** | **Hints steer your guess; dice add luck** |
+| ![Results: first place](Docs/readme/win.jpg) | |
+| **Last car standing takes the trophy** | |
 
 ## Controls
 
