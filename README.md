@@ -4,7 +4,9 @@
 
 Play it in your browser: [kingmayhem.itch.io/jackpot-derby](https://kingmayhem.itch.io/jackpot-derby)
 
-<img src="Docs/readme/title.jpg" alt="Title screen" align="right" width="420">
+<table>
+<tr>
+<td valign="top" width="55%">
 
 Four cars. One cartoon city.
 
@@ -15,8 +17,6 @@ anyone who gets close. Meanwhile the **Bad Luck Storm** closes in. **Last car st
 Made for the **Unity Game Jam 2026**. Theme: **Lucky Number**.
 
 ## How the lucky number works
-<img src="Docs/readme/small_blaster.jpg" alt="Small Blaster from a chest" align="right" width="420">
-
 - Your number runs from **1 to 100** and wraps around. Drive **forward** to count **up**, **reverse** to count **down**.
 - **Stop** to lock your number. You get a hint against the nearest chest: **TOO HIGH**, **TOO LOW**,
   **CLOSE** (within 5) or **LUCKY!** (exact). "WAY" means you're more than 25 off.
@@ -27,15 +27,11 @@ Made for the **Unity Game Jam 2026**. Theme: **Lucky Number**.
 - But stopping is a gamble: a stopped car is an easy target!
 
 ## Luck and superstition
-<img src="Docs/readme/how_to_play.jpg" alt="How to Play" align="right" width="420">
-
 - **Dice** stack luck (up to 5). Each one rolls your number toward the nearest chest's, closer the luckier you are.
 - **Black cats** wander the streets. Hit one and your number gets scrambled and your luck wiped.
 - **Four-leaf clovers** patch up your car.
 
 ## Combat
-<img src="Docs/readme/street.jpg" alt="Racing through the city" align="right" width="420">
-
 - Blasters aim and fire **automatically** at the nearest enemy in range. You just drive.
 - **Ram** other cars for damage. Hits to the side or rear hurt more.
 - Unarmed? Run, hide, or ram.
@@ -43,8 +39,6 @@ Made for the **Unity Game Jam 2026**. Theme: **Lucky Number**.
   **Double Dice 11** (chaotic gambler).
 
 ## Controls
-<img src="Docs/readme/win.jpg" alt="First place" align="right" width="420">
-
 
 | Key | Action |
 |---|---|
@@ -57,7 +51,18 @@ Made for the **Unity Game Jam 2026**. Theme: **Lucky Number**.
 
 Best played on a desktop browser with a keyboard. The first load can take a moment.
 
-<br clear="right">
+</td>
+<td valign="top" width="45%">
+
+<img src="Docs/readme/title.jpg" alt="Title screen" width="100%"><br><br>
+<img src="Docs/readme/small_blaster.jpg" alt="Small Blaster from a chest" width="100%"><br><br>
+<img src="Docs/readme/how_to_play.jpg" alt="How to Play" width="100%"><br><br>
+<img src="Docs/readme/street.jpg" alt="Racing through the city" width="100%"><br><br>
+<img src="Docs/readme/win.jpg" alt="First place" width="100%"><br><br>
+
+</td>
+</tr>
+</table>
 
 ## Running the project in Unity
 1. Install **Unity Hub** and **Unity 6000.6.8f1** (Unity 6) with **Web Build Support**.
