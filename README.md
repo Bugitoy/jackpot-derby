@@ -2,24 +2,45 @@
 
 # Jackpot Derby
 
-A lucky-number car brawl made for the **Unity Game Jam 2026** (theme: *Lucky Number*).
-Roll your odometer, crack chests, last car standing wins.
+**▶ Play it in your browser: [kingmayhem.itch.io/jackpot-derby](https://kingmayhem.itch.io/jackpot-derby)**
 
-Four cars in a cartoon city. Every car's number is its **odometer**, rolling like slot-machine reels as
-it drives. Chests drop in with a hidden lucky number: stop to lock your number and get a TOO HIGH /
-TOO LOW / CLOSE hint, then ram the chest with a close enough number to win a blaster that fires on
-its own. A Bad Luck Storm shrinks the arena. **Last car standing wins.**
+Four cars. One cartoon city.
+
+Every car's number is its **odometer**: it rolls like slot-machine reels as you drive. Chests drop into the
+city with a hidden lucky number. Match it, ram the chest, and you win a **blaster** that fires on its own at
+anyone who gets close. Meanwhile the **Bad Luck Storm** closes in. **Last car standing wins.**
+
+Made for the **Unity Game Jam 2026**. Theme: **Lucky Number**.
 
 ## Screenshots
 
 | | |
 |---|---|
-| ![Title screen](Docs/readme/title.jpg) | ![Driving through the city, odometer rolling](Docs/readme/driving.jpg) |
-| **Title screen** | **Your number rolls as you drive** |
-| ![Close to a Jackpot chest](Docs/readme/chest_close.jpg) | ![Locked number: WAY TOO HIGH](Docs/readme/number_hint.jpg) |
-| **Stop to lock it: CLOSE to the chest's number** | **Hints steer your guess; dice add luck** |
-| ![Results: first place](Docs/readme/win.jpg) | |
-| **Last car standing takes the trophy** | |
+| ![Title screen](Docs/readme/title.jpg) | ![How to Play](Docs/readme/how_to_play.jpg) |
+| ![Racing through the city](Docs/readme/street.jpg) | ![Small Blaster from a chest](Docs/readme/small_blaster.jpg) |
+| ![First place](Docs/readme/win.jpg) | |
+
+## How the lucky number works
+- Your number runs from **1 to 100** and wraps around. Drive **forward** to count **up**, **reverse** to count **down**.
+- **Stop** to lock your number. You get a hint against the nearest chest: **TOO HIGH**, **TOO LOW**,
+  **CLOSE** (within 5) or **LUCKY!** (exact). "WAY" means you're more than 25 off.
+- Your locked number stays locked while you drive to the chest. Press **R** to unlock it and roll again.
+- **Ram the chest** while you're close or exact: no blaster → **Small Blaster** → **Jackpot Cannon**.
+  Exact numbers also fully repair your car.
+- Red **Jackpot chests** repair you even on a close hit.
+- But stopping is a gamble: a stopped car is an easy target!
+
+## Luck and superstition
+- **Dice** stack luck (up to 5). Each one rolls your number toward the nearest chest's, closer the luckier you are.
+- **Black cats** wander the streets. Hit one and your number gets scrambled and your luck wiped.
+- **Four-leaf clovers** patch up your car.
+
+## Combat
+- Blasters aim and fire **automatically** at the nearest enemy in range. You just drive.
+- **Ram** other cars for damage. Hits to the side or rear hurt more.
+- Unarmed? Run, hide, or ram.
+- Your rivals: **Lucky 8** (aggressive hunter), **Black Cat 13** (sneaky ambusher) and
+  **Double Dice 11** (chaotic gambler).
 
 ## Controls
 
@@ -28,26 +49,36 @@ its own. A Bad Luck Storm shrinks the arena. **Last car standing wins.**
 | W / ↑ | Accelerate |
 | S / ↓ | Brake, then reverse |
 | A D / ← → | Steer |
-| Shift | Turbo |
+| Shift | Turbo (2 s boost to speed and fire rate) |
 | R | Unlock your number |
 | Esc | Pause (Graphics: Auto / High / Low is in the pause menu) |
-| F1 | Show the frame rate |
 
-## Opening the project
+Best played on a desktop browser with a keyboard. The first load can take a moment.
 
-- Unity **6000.6.8f1** (Unity 6), Universal Render Pipeline, target platform **Web (WebGL)**.
-- Open the folder in Unity Hub, then open `Assets/Scenes/Arena.unity` and press Play.
-- Gameplay scripts are in `Assets/Scripts`. The arena, scenery prefabs, menus and sounds are generated
-  by editor tools under the **Jackpot Derby** menu (see `Assets/Scripts/Editor`).
-- `CLAUDE.md` is the full design document.
+## Running the project in Unity
+1. Install **Unity Hub** and **Unity 6000.6.8f1** (Unity 6) with **Web Build Support**.
+2. Clone or download this repository.
+3. In Unity Hub choose **Add → Add project from disk** and pick the project folder.
+   The first open takes a while: Unity imports the models and textures.
+4. Open **`Assets/Scenes/Arena.unity`** and press **Play**.
+5. To make a browser build: **File → Build Profiles → Web → Build**. The project uses its own
+   `JackpotDerby` WebGL template.
+
+The project uses the Universal Render Pipeline (URP), glTFast for the models and AI Navigation for the
+rival cars; Unity installs these packages automatically from `Packages/manifest.json`.
 
 ## Credits and AI disclosure
+Code written with Claude (Anthropic). Concept images were made with Google Nano Banana and 3D models were
+made with Tripo AI. Game design, direction and asset selection by Lefika.
 
-Code written with Claude (Anthropic). Concept images made with Google Nano Banana. 3D models made with
-Tripo AI. Game design, direction and asset selection by Lefika.
 Sound effects and music were synthesised in the Unity editor for this game.
-Font: Poppins by Indian Type Foundry & Jonny Pinhorn (SIL Open Font License 1.1).
+
+Font: **Poppins** by Indian Type Foundry & Jonny Pinhorn, SIL Open Font License 1.1.
+
+Made with Unity 6 (URP).
 
 ## License
-
-Code: MIT (`LICENSE`). Art, models, music and sounds: all rights reserved (`ASSETS_LICENSE.md`).
+- **Code** (`Assets/Scripts`, the WebGL template): MIT, see [`LICENSE`](LICENSE).
+- **Art, 3D models, textures, music and sound effects**: © 2026 Lefika, all rights reserved,
+  see [`ASSETS_LICENSE.md`](ASSETS_LICENSE.md).
+- **Poppins** font: SIL Open Font License 1.1 (`Assets/UI/Fonts/OFL.txt`).
