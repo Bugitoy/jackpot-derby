@@ -134,6 +134,8 @@ public static class ArenaBuilder
 
         BuildBoundary(walls, w * t, h * t);
         BuildOuterCity(outside, t);
+        TidyRoofsAndMountSigns(root);
+        FixRoofPropsForLods(root);
         // Parked cars can land on a bench or hydrant poking off the sidewalk: slide them clear.
         PushableSetup.ResolveOverlaps(grid);
 
@@ -354,6 +356,346 @@ public static class ArenaBuilder
             wanted--;
         }
         Object.DestroyImmediate(mc);
+    }
+
+    // ---------- tidy roofs, neon signs on walls ----------
+
+    /// <summary>Small rooftop units Lefika asked to drop: too small to notice, and they cluttered roofs.</summary>
+    static readonly string[] SmallRoofProps = { "roof_vents", "roof_ac_unit", "roof_antennas" };
+    /// <summary>Projecting "blade" signs: the brackets on the model's -X side bolt to a wall.</summary>
+    static readonly string[] WallSignPool = { "neon_sign_clover", "neon_sign_dice" };
+    const int WallSignCount = 14;
+    const float WallSignMinBottom = 4.5f;
+
+    [MenuItem("Jackpot Derby/Tidy Roofs And Mount Neon Signs")]
+    static void TidyRoofsMenu()
+    {
+        var grid = Object.FindAnyObjectByType<ArenaGrid>();
+        if (grid == null) return;
+        TidyRoofsAndMountSigns(grid.transform);
+        FixRoofPropsForLods(grid.transform);
+        EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+    }
+
+    /// <summary>
+    /// Removes the small rooftop props (vents, AC units, antennas) and moves the neon signs off the
+    /// roofs onto building fronts, mounted like real shop signs: brackets bolted to a flat stretch of
+    /// wall a little below the roofline, the sign sticking out over the sidewalk so traffic reads it.
+    /// A spot is used only if the wall behind the brackets is flat and facing the street, nothing of
+    /// the facade (balconies, awnings, fire escapes) pokes into the sign, the sign stays clear of
+    /// lamps and other props, and it hangs at least WallSignMinBottom above the ground.
+    /// </summary>
+    public static void TidyRoofsAndMountSigns(Transform arenaRoot)
+    {
+        var small = new HashSet<string>(SmallRoofProps);
+        var wallSigns = new HashSet<string>(WallSignPool);
+        int removedSmall = 0, removedSigns = 0;
+        foreach (var mf in arenaRoot.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (mf == null || mf.sharedMesh == null) continue;
+            string n = mf.sharedMesh.name;
+            if (small.Contains(n)) { Undo.DestroyObjectImmediate(mf.gameObject); removedSmall++; }
+            else if (wallSigns.Contains(n)) { Undo.DestroyObjectImmediate(mf.gameObject); removedSigns++; }
+        }
+
+        // Candidate buildings: the arena's own blocks (the streets the player drives).
+        var blocks = arenaRoot.Find("Blocks");
+        var buildings = new List<MeshFilter>();
+        var others = new List<Renderer>();
+        foreach (var mf in arenaRoot.GetComponentsInChildren<MeshFilter>())
+        {
+            if (mf.sharedMesh == null) continue;
+            var r = mf.GetComponent<Renderer>();
+            bool isBuilding = mf.sharedMesh.lodCount > 1 && r.bounds.size.x >= 6f && r.bounds.size.y >= 5f;
+            if (isBuilding && blocks != null && mf.transform.IsChildOf(blocks)) buildings.Add(mf);
+            // Street props, lamps, rooftop towers and billboards (not ground slabs or buildings).
+            else if (!isBuilding && r.bounds.size.y > 0.5f && Mathf.Max(r.bounds.size.x, r.bounds.size.z) < 6f) others.Add(r);
+        }
+
+        var signPrefab = SceneryKit.Get(WallSignPool[0]);
+        if (signPrefab == null) return;
+        Bounds sb = signPrefab.GetComponent<MeshFilter>().sharedMesh.bounds;
+        float reach = -sb.min.x;                          // pivot to the bracket plates
+        float bracketY = sb.min.y + sb.size.y * 0.33f;    // between the two bracket arms
+        var rng = new System.Random(777);
+        // Shuffle so the signs spread over the map.
+        for (int i = buildings.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); (buildings[i], buildings[j]) = (buildings[j], buildings[i]); }
+
+        var probe = new GameObject("SignProbe") { hideFlags = HideFlags.HideAndDontSave };
+        var mc = probe.AddComponent<MeshCollider>();
+        var mounted = new List<Vector3>();
+        var lodCache = new Dictionary<Mesh, Mesh>();
+        int placed = 0;
+        try
+        {
+            foreach (var b in buildings)
+            {
+                if (placed >= WallSignCount) break;
+                if (!lodCache.TryGetValue(b.sharedMesh, out var full)) lodCache[b.sharedMesh] = full = LodMeshes(b.sharedMesh)[0];
+                probe.transform.SetPositionAndRotation(b.transform.position, b.transform.rotation);
+                probe.transform.localScale = b.transform.lossyScale;
+                mc.sharedMesh = full;
+                Bounds mb = b.sharedMesh.bounds;
+                Bounds wb = b.GetComponent<Renderer>().bounds;
+                Vector3 fwd = b.transform.forward, right = b.transform.right;
+                bool done = false;
+                foreach (float side in rng.Next(2) == 0 ? new[] { 1f, -1f } : new[] { -1f, 1f })
+                {
+                    for (float h = 0.72f; h >= 0.45f && !done; h -= 0.09f)
+                    {
+                        float pivotY = wb.min.y + wb.size.y * h - sb.size.y * 0.5f;
+                        if (pivotY + sb.min.y < wb.min.y + WallSignMinBottom) continue;
+                        if (pivotY + sb.max.y > wb.max.y - 0.6f) continue;
+                        // Find the wall behind the brackets.
+                        Vector3 lateral = b.transform.TransformPoint(new Vector3(mb.center.x + side * 0.3f * mb.size.x, mb.center.y, mb.max.z));
+                        Vector3 origin = new Vector3(lateral.x, pivotY + bracketY, lateral.z) + fwd * 4f;
+                        if (!mc.Raycast(new Ray(origin, -fwd), out RaycastHit wall, 12f)) continue;
+                        if (Vector3.Dot(wall.normal, fwd) < 0.75f) continue;
+                        // The sign's slab, from the wall out: nothing of the facade may stick into it,
+                        // and there must be wall behind all of it (not sky above the roofline).
+                        bool clear = true;
+                        foreach (float dy in new[] { 0.15f, 0.5f, 0.85f })
+                            foreach (float dl in new[] { -0.9f, -0.45f, 0f, 0.45f, 0.9f }) // the sign plus room either side
+                            {
+                                Vector3 o = new Vector3(wall.point.x, pivotY + sb.min.y + sb.size.y * dy, wall.point.z) + right * dl + fwd * 4f;
+                                if (!mc.Raycast(new Ray(o, -fwd), out RaycastHit h2, 12f)) { clear = false; break; }
+                                if (Vector3.Dot(h2.point - wall.point, fwd) > 0.3f) { clear = false; break; }
+                            }
+                        if (!clear) continue;
+                        // Face along the street: the model's -X (brackets) then points at the wall.
+                        Vector3 faceDir = -right;
+                        Vector3 pivot = new Vector3(wall.point.x, pivotY, wall.point.z) + fwd * (reach - 0.02f);
+                        var signBounds = new Bounds(pivot + Vector3.up * sb.center.y, new Vector3(1f, 0f, 1f) * (sb.size.x + 0.4f) + Vector3.up * sb.size.y);
+                        bool hits = false;
+                        foreach (var o in others) if (o != null && o.bounds.Intersects(signBounds)) { hits = true; break; }
+                        if (hits) continue;
+                        bool near = false;
+                        foreach (var m in mounted) if ((m - pivot).sqrMagnitude < 12f * 12f) { near = true; break; }
+                        if (near) continue;
+                        float yaw = Quaternion.LookRotation(faceDir).eulerAngles.y;
+                        var sign = Place(b.transform.parent, WallSignPool[placed % WallSignPool.Length], pivot, yaw, false);
+                        if (sign == null) continue;
+                        Undo.RegisterCreatedObjectUndo(sign, "Mount neon sign");
+                        mounted.Add(pivot);
+                        placed++;
+                        done = true;
+                    }
+                    if (done) break;
+                }
+            }
+        }
+        finally
+        {
+            Object.DestroyImmediate(probe);
+            foreach (var m in lodCache.Values) Object.DestroyImmediate(m);
+        }
+        Debug.Log($"[ArenaBuilder] Roofs tidied: {removedSmall} small roof props removed, {removedSigns} roof neon signs taken down, {placed} neon signs mounted on walls.");
+    }
+
+    // ---------- roof props: whole base on flat roof, steady across Mesh LODs ----------
+
+    /// <summary>How far (units) the roof under a prop's base may vary: across the base, and between LODs.</summary>
+    const float RoofFlatTolerance = 0.25f;
+    const float RoofLodTolerance = 0.3f;
+
+    [MenuItem("Jackpot Derby/Fix Roof Props")]
+    static void FixRoofPropsMenu()
+    {
+        var grid = Object.FindAnyObjectByType<ArenaGrid>();
+        if (grid == null) return;
+        FixRoofPropsForLods(grid.transform);
+        EditorSceneManager.MarkSceneDirty(grid.gameObject.scene);
+    }
+
+    /// <summary>
+    /// Makes every rooftop prop (AC units, vents, antennas, water towers, billboards, neon signs) stand
+    /// properly on its roof:
+    ///  * its WHOLE base rests on flat roof at one height: no legs hanging off the edge, no balancing
+    ///    on a chimney, ridge or sloped tiles, nothing of the building poking up through it
+    ///    (DressRoof only ever checked the single point under the prop's centre);
+    ///  * that roof stays put on every lighter Mesh LOD of the building (simplified roofs can sink or
+    ///    rise by several units on ledges, which left props floating a few blocks away);
+    ///  * it doesn't overlap another rooftop prop.
+    /// A prop that fails is moved to a spot on the same roof that passes, or deleted if there's none.
+    /// Uses its own random numbers so the rest of the arena stays as built. Run by Build Arena.
+    /// </summary>
+    public static void FixRoofPropsForLods(Transform arenaRoot)
+    {
+        var roofNames = new HashSet<string>(RoofPool);
+        var signNames = new HashSet<string>(SignPool);
+        roofNames.UnionWith(signNames);
+        roofNames.ExceptWith(WallSignPool);   // those hang on walls (TidyRoofsAndMountSigns)
+        roofNames.ExceptWith(SmallRoofProps); // removed
+        var buildings = new List<MeshFilter>();
+        var items = new List<MeshFilter>();
+        foreach (var mf in arenaRoot.GetComponentsInChildren<MeshFilter>())
+        {
+            if (mf.sharedMesh == null) continue;
+            if (roofNames.Contains(mf.sharedMesh.name)) items.Add(mf);
+            else if (mf.sharedMesh.lodCount > 1 && mf.GetComponent<Renderer>().bounds.size.x >= 6f) buildings.Add(mf);
+        }
+
+        var lodCache = new Dictionary<Mesh, Mesh[]>();
+        var probe = new GameObject("RoofProbe") { hideFlags = HideFlags.HideAndDontSave };
+        var mc = probe.AddComponent<MeshCollider>();
+        var rng = new System.Random(4242);
+        int moved = 0, removed = 0;
+        // Footprints of the props kept so far, so none end up overlapping.
+        var placed = new List<(Vector3 pos, float radius)>();
+        bool Free(Vector3 at, float r)
+        {
+            foreach (var (pos, radius) in placed)
+                if (Mathf.Abs(pos.y - at.y) < 3f && new Vector2(pos.x - at.x, pos.z - at.z).magnitude < radius + r) return false;
+            return true;
+        }
+        try
+        {
+            foreach (var item in items)
+            {
+                Vector3 p = item.transform.position;
+                MeshFilter bld = null;
+                foreach (var b in buildings)
+                {
+                    Bounds bb = b.GetComponent<Renderer>().bounds;
+                    if (p.x > bb.min.x && p.x < bb.max.x && p.z > bb.min.z && p.z < bb.max.z && Mathf.Abs(bb.max.y - p.y) < 8f) { bld = b; break; }
+                }
+                if (bld == null) { Undo.DestroyObjectImmediate(item.gameObject); removed++; continue; }
+                if (!lodCache.TryGetValue(bld.sharedMesh, out var lods)) lodCache[bld.sharedMesh] = lods = LodMeshes(bld.sharedMesh);
+                probe.transform.SetPositionAndRotation(bld.transform.position, bld.transform.rotation);
+                probe.transform.localScale = bld.transform.lossyScale;
+                Bounds wb = bld.GetComponent<Renderer>().bounds;
+                float top = wb.max.y + 5f;
+                Vector3 size = Vector3.Scale(item.sharedMesh.bounds.size, item.transform.lossyScale);
+                float spacing = Mathf.Max(size.x, size.z) * 0.5f;
+                Quaternion rot = item.transform.rotation;
+
+                if (RoofSpotOk(mc, lods, item, p, rot, top, out float y) && Free(p, spacing))
+                {
+                    if (Mathf.Abs(y - p.y) > 0.01f)
+                    {
+                        Undo.RecordObject(item.transform, "Fix roof prop");
+                        item.transform.position = new Vector3(p.x, y, p.z);
+                    }
+                    placed.Add((item.transform.position, spacing));
+                    continue;
+                }
+
+                // Look for a spot on the same roof where the whole base fits. Signs keep facing the
+                // street; units and towers may turn.
+                Bounds mb = bld.sharedMesh.bounds;
+                bool sign = signNames.Contains(item.sharedMesh.name);
+                bool found = false;
+                for (int attempt = 0; attempt < 150 && !found; attempt++)
+                {
+                    Vector3 local = new Vector3((float)(rng.NextDouble() - 0.5) * 0.8f, 0, (float)(rng.NextDouble() - 0.5) * 0.8f);
+                    Vector3 o = bld.transform.TransformPoint(mb.center + Vector3.Scale(local, mb.size));
+                    mc.sharedMesh = lods[0];
+                    if (!mc.Raycast(new Ray(new Vector3(o.x, top, o.z), Vector3.down), out RaycastHit hit, top - wb.min.y + 1f)) continue;
+                    if (hit.normal.y < 0.96f || hit.point.y < wb.min.y + wb.size.y * 0.55f) continue;
+                    Quaternion r = sign ? rot : Quaternion.Euler(0f, rng.Next(4) * 90f + rot.eulerAngles.y, 0f);
+                    if (!Free(hit.point, spacing) || !RoofSpotOk(mc, lods, item, hit.point, r, top, out float fy)) continue;
+                    Undo.RecordObject(item.transform, "Fix roof prop");
+                    item.transform.SetPositionAndRotation(new Vector3(hit.point.x, fy, hit.point.z), r);
+                    placed.Add((item.transform.position, spacing));
+                    found = true;
+                }
+                if (found) moved++;
+                else { Undo.DestroyObjectImmediate(item.gameObject); removed++; }
+            }
+        }
+        finally
+        {
+            Object.DestroyImmediate(probe);
+            foreach (var kv in lodCache) foreach (var m in kv.Value) Object.DestroyImmediate(m);
+        }
+        Debug.Log($"[ArenaBuilder] Roof props checked: {items.Count} props, {moved} moved, {removed} removed.");
+    }
+
+    /// <summary>
+    /// Points under a prop's base: a 4 x 4 grid over its footprint (slightly inset), in world space.
+    /// </summary>
+    static List<Vector3> BasePoints(MeshFilter item, Vector3 pos, Quaternion rot)
+    {
+        Bounds b = item.sharedMesh.bounds;
+        Vector3 s = item.transform.lossyScale;
+        var pts = new List<Vector3>();
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
+            {
+                float u = Mathf.Lerp(-0.45f, 0.45f, i / 3f), v = Mathf.Lerp(-0.45f, 0.45f, j / 3f);
+                Vector3 local = new Vector3((b.center.x + u * b.size.x) * s.x, 0f, (b.center.z + v * b.size.z) * s.z);
+                pts.Add(pos + rot * local);
+            }
+        return pts;
+    }
+
+    /// <summary>
+    /// The prop's whole base lies on flat, level roof (first surface hit from above everywhere under
+    /// it, facing up, all within tolerance), and that roof holds on every Mesh LOD. y = where to stand it.
+    /// </summary>
+    static bool RoofSpotOk(MeshCollider mc, Mesh[] lods, MeshFilter item, Vector3 pos, Quaternion rot, float top, out float y)
+    {
+        y = pos.y;
+        var pts = BasePoints(item, pos, rot);
+        var baseY = new float[pts.Count];
+        mc.sharedMesh = lods[0];
+        float lo = float.MaxValue, hi = float.MinValue;
+        for (int i = 0; i < pts.Count; i++)
+        {
+            if (!mc.Raycast(new Ray(new Vector3(pts[i].x, top, pts[i].z), Vector3.down), out RaycastHit hit, 200f)) return false;
+            if (hit.normal.y < 0.94f) return false;
+            baseY[i] = hit.point.y;
+            lo = Mathf.Min(lo, baseY[i]);
+            hi = Mathf.Max(hi, baseY[i]);
+        }
+        if (hi - lo > RoofFlatTolerance) return false;
+        y = hi;
+        for (int lod = 1; lod < lods.Length; lod++)
+        {
+            mc.sharedMesh = lods[lod];
+            for (int i = 0; i < pts.Count; i++)
+            {
+                float ly = mc.Raycast(new Ray(new Vector3(pts[i].x, top, pts[i].z), Vector3.down), out RaycastHit hit, 200f) ? hit.point.y : -99f;
+                if (Mathf.Abs(ly - baseY[i]) > RoofLodTolerance) return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>One plain mesh per Mesh LOD level (same vertices, that level's triangles) for collision tests.</summary>
+    static Mesh[] LodMeshes(Mesh mesh)
+    {
+        var md = Mesh.AcquireReadOnlyMeshData(mesh);
+        int[] ib;
+        try
+        {
+            var data = md[0];
+            if (data.indexFormat == IndexFormat.UInt16)
+            {
+                var na = data.GetIndexData<ushort>();
+                ib = new int[na.Length];
+                for (int i = 0; i < na.Length; i++) ib[i] = na[i];
+            }
+            else ib = data.GetIndexData<int>().ToArray();
+        }
+        finally { md.Dispose(); }
+        var verts = mesh.vertices;
+        var result = new Mesh[Mathf.Max(1, mesh.lodCount)];
+        for (int lod = 0; lod < result.Length; lod++)
+        {
+            var tris = new List<int>();
+            for (int s = 0; s < mesh.subMeshCount; s++)
+            {
+                var r = mesh.GetLod(s, lod);
+                int bv = mesh.GetSubMesh(s).baseVertex;
+                for (int i = 0; i < r.indexCount; i++) tris.Add(ib[r.indexStart + i] + bv);
+            }
+            var m = new Mesh { indexFormat = IndexFormat.UInt32, hideFlags = HideFlags.HideAndDontSave };
+            m.SetVertices(verts);
+            m.SetTriangles(tris, 0);
+            result[lod] = m;
+        }
+        return result;
     }
 
     // ---------- garages ----------
@@ -581,6 +923,26 @@ public static class ArenaBuilder
         }
         SetStaticRecursive(roads.gameObject);
         BuildDeepRings(lots, t);
+        ApplyFarLodBias(parent);
+    }
+
+    /// <summary>Mesh LOD selection bias for scenery you can never drive near (positive = lighter sooner).</summary>
+    const float FarLodBias = 1.5f;
+
+    /// <summary>
+    /// Everything more than two tiles past the arena edge (outer ring 3 onwards) switches to its
+    /// lighter Mesh LODs sooner: it's only ever seen from a distance.
+    /// </summary>
+    public static void ApplyFarLodBias(Transform outside)
+    {
+        var grid = Object.FindAnyObjectByType<ArenaGrid>();
+        float halfX = grid.Width * grid.tileSize * 0.5f, halfZ = grid.Height * grid.tileSize * 0.5f;
+        foreach (var r in outside.GetComponentsInChildren<MeshRenderer>())
+        {
+            Vector3 p = r.bounds.center;
+            float beyond = Mathf.Max(Mathf.Abs(p.x) - halfX, Mathf.Abs(p.z) - halfZ);
+            if (beyond > grid.tileSize * 2f) r.meshLodSelectionBias = FarLodBias;
+        }
     }
 
     /// <summary>Extra rows of buildings beyond the tight lots, so the city edge has depth.</summary>
@@ -780,8 +1142,13 @@ public static class ArenaBuilder
         }
     }
 
+    /// <summary>
+    /// Static-batch the flat ground pieces (road quads, slabs). Scenery models are left out: a
+    /// static-batched copy always draws its full-detail Mesh LOD and adds its whole mesh to the build.
+    /// </summary>
     static void SetStaticRecursive(GameObject go)
     {
+        if (PrefabUtility.IsAnyPrefabInstanceRoot(go)) return;
         GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic);
         foreach (Transform child in go.transform) SetStaticRecursive(child.gameObject);
     }

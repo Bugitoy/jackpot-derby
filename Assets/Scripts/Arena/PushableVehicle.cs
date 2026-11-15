@@ -31,6 +31,12 @@ public class PushableVehicle : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        // Squeezed between a car and a wall it needs a few more solver passes to sit still,
+        // and any overlap should ease out rather than pop it across the street.
+        rb.solverIterations = 12;
+        rb.solverVelocityIterations = 4;
+        rb.maxDepenetrationVelocity = 4f;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         lastPos = transform.position;
         var holder = transform.Find("Wheels");
         if (holder == null) return;
@@ -75,7 +81,16 @@ public class PushableVehicle : MonoBehaviour
         Vector3 w = rb.angularVelocity;
         float spin = Mathf.Clamp(Mathf.MoveTowards(w.y, 0f, spinFriction * dt), -maxSpin, maxSpin);
         rb.angularVelocity = new Vector3(0f, spin, 0f);
-        if (Mathf.Abs(along) < 0.05f && Mathf.Abs(side) < 0.05f && Mathf.Abs(spin) < 0.03f) rb.Sleep();
+        // Settle once it has stopped, but not while a car is still leaning on it: forcing sleep
+        // there made it sleep and wake every step, which showed as a stutter.
+        if (Mathf.Abs(along) < 0.05f && Mathf.Abs(side) < 0.05f && Mathf.Abs(spin) < 0.03f && Time.time - lastPushed > 0.3f) rb.Sleep();
+    }
+
+    float lastPushed = -1f;
+
+    void OnCollisionStay(Collision c)
+    {
+        if (c.rigidbody != null) lastPushed = Time.time;
     }
 
     void OnCollisionEnter(Collision c)

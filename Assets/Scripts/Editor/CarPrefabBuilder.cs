@@ -53,15 +53,7 @@ public static class CarPrefabBuilder
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
-        // A capsule lying along the car: rounded ends let the car swivel off walls and slide
-        // round building corners instead of snagging like a box would.
-        var capsule = root.AddComponent<CapsuleCollider>();
-        float radius = Mathf.Min(b.size.x * 0.46f, 1.2f);
-        capsule.direction = 2; // Z axis
-        capsule.radius = radius;
-        capsule.height = b.size.z * 0.98f;
-        capsule.center = new Vector3(0f, radius, 0f);
-        capsule.sharedMaterial = CarPhysicsMaterial();
+        FitBodyCollider(root, body);
 
         // Roof mount for blasters (barrels on the models point along -X, so turn them +90°).
         var mount = new GameObject("BlasterMount").transform;
@@ -239,6 +231,67 @@ public static class CarPrefabBuilder
                 lo = Vector3.Min(lo, p); hi = Vector3.Max(hi, p);
             }
         return lo.x == float.MaxValue ? model.transform.position : new Vector3((lo.x + hi.x) / 2f, minY, (lo.z + hi.z) / 2f);
+    }
+
+    /// <summary>
+    /// One box the shape of the car body (from the ground to the roof line), frictionless. A capsule
+    /// used to sit here, but its rounded ends left the body's corners and low bumpers up to 0.6 units
+    /// outside it, so in a glancing crash the visible car sank into the other car before they touched.
+    /// One collider (not a compound) so pickups, chests and rams see a single contact per car.
+    /// </summary>
+    static void FitBodyCollider(GameObject root, Bounds body)
+    {
+        var old = root.GetComponent<CapsuleCollider>();
+        if (old != null) Object.DestroyImmediate(old, true);
+        var box = root.GetComponent<BoxCollider>();
+        if (box == null) box = root.AddComponent<BoxCollider>();
+        float top = Mathf.Min(body.max.y, 2.4f);
+        box.size = new Vector3(body.size.x * 0.97f, top, body.size.z * 0.98f);
+        box.center = new Vector3(body.center.x, top * 0.5f, body.center.z);
+        box.sharedMaterial = CarPhysicsMaterial();
+    }
+
+    /// <summary>
+    /// Refit the existing car prefabs' colliders to their bodies (no full rebuild needed).
+    /// The body is the biggest mesh of the car model.
+    /// </summary>
+    [MenuItem("Jackpot Derby/Fit Car Colliders To Bodies")]
+    public static void FitAllCarColliders()
+    {
+        foreach (var g in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Cars" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(g);
+            var root = PrefabUtility.LoadPrefabContents(path);
+            var visual = root.transform.Find("Visual");
+            Bounds body = default;
+            float best = -1f;
+            if (visual != null)
+                foreach (var mf in visual.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    if (mf.sharedMesh == null || mf.sharedMesh.vertexCount < 3) continue;
+                    bool blaster = false;   // blasters on the roof mount aren't body
+                    for (var t = mf.transform; t != null && t != root.transform; t = t.parent) if (t.name == "BlasterMount") blaster = true;
+                    if (blaster) continue;
+                    Bounds lb = LocalMeshBounds(mf, root.transform);
+                    float vol = lb.size.x * lb.size.y * lb.size.z;
+                    if (vol > best) { best = vol; body = lb; }
+                }
+            if (best > 0f)
+            {
+                FitBodyCollider(root, body);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                Debug.Log($"[CarPrefabBuilder] {System.IO.Path.GetFileNameWithoutExtension(path)}: body collider {root.GetComponent<BoxCollider>().size}");
+            }
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    static Bounds LocalMeshBounds(MeshFilter mf, Transform root)
+    {
+        var v = mf.sharedMesh.vertices;
+        var b = new Bounds(root.InverseTransformPoint(mf.transform.TransformPoint(v[0])), Vector3.zero);
+        for (int i = 1; i < v.Length; i += 2) b.Encapsulate(root.InverseTransformPoint(mf.transform.TransformPoint(v[i])));
+        return b;
     }
 
     static PhysicsMaterial CarPhysicsMaterial()
