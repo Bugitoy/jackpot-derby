@@ -51,3 +51,16 @@ Thumbs.db
 # MCP editor screenshots
 /Assets/Screenshots/
 /Assets/Screenshots.meta
+
+# Kept locally, not published: editor build tools, trailer tooling, working docs
+/Assets/Scripts/Editor/
+/Assets/Scripts/Editor.meta
+/Assets/Scripts/DebugTools/TrailerDirector.cs
+/Assets/Scripts/DebugTools/TrailerDirector.cs.meta
+/CLAUDE.md
+/Data/
+/Docs/*
+!/Docs/itch/
+/Docs/itch/*
+!/Docs/itch/banner.png
+!/Docs/readme/
