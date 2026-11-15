@@ -341,6 +341,7 @@ public partial class Hud
         var mm = MatchManager.Instance;
         mm.CountdownTick += n =>
         {
+            if (TrailerMode) return;
             if (n > 0) ShowPopup(n.ToString(), Color.white, "");
             else ShowPopup("GO!", HpGreen, "last car standing wins");
         };
@@ -401,8 +402,6 @@ public partial class Hud
 
         UpdatePlayerPanel();
         UpdateAbilities();
-        UpdateWorldBars();
-        UpdateDamageNumbers(dt);
 
         var mm = MatchManager.Instance;
         if (mm != null)
@@ -458,7 +457,7 @@ public partial class Hud
         // A soft dark vignette; the StormVolume (faded by StormController) does the desaturation.
         stormOverlayAlpha = Mathf.MoveTowards(stormOverlayAlpha, outside ? 0.45f : 0f, dt * 1.2f);
         stormOverlay.color = new Color(StormDust.r, StormDust.g, StormDust.b, stormOverlayAlpha);
-        stormWarning.gameObject.SetActive(outside);
+        stormWarning.gameObject.SetActive(outside && !TrailerMode);
         if (outside) stormWarning.alpha = 0.6f + 0.4f * Mathf.Sin(Time.time * 7f);
     }
 

@@ -94,6 +94,14 @@ public class GraphicsQuality : MonoBehaviour
         Apply();
     }
 
+    /// <summary>Use this setting for the rest of the session without saving it (trailer recording).</summary>
+    public void Override(GfxSetting s)
+    {
+        Setting = s;
+        autoDecided = true;
+        Apply();
+    }
+
     /// <summary>Auto → High → Low → Auto (for the menu button).</summary>
     public void Cycle() => Set(Setting == GfxSetting.Auto ? GfxSetting.High : Setting == GfxSetting.High ? GfxSetting.Low : GfxSetting.Auto);
 

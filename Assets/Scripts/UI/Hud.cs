@@ -7,7 +7,11 @@ using UnityEngine.UI;
 /// The player's HUD, built in code at startup from Lefika's painted UI art (see UIKit): the
 /// three-reel odometer frame with its padlock and luck slot, hint line, big popups (TOO HIGH,
 /// LUCKY!, SMALL BLASTER!...), blaster status, and chest markers/arrows.
+/// Runs after the ChaseCamera (and the menu swoop): everything pinned to a world point (number
+/// plates, health bars, damage numbers, chest markers) is placed in LateUpdate from the camera's
+/// final pose for the frame, so it doesn't lag a frame behind and jitter as the camera moves.
 /// </summary>
+[DefaultExecutionOrder(300)]
 public partial class Hud : MonoBehaviour
 {
     [Header("Look")]
@@ -21,6 +25,18 @@ public partial class Hud : MonoBehaviour
     [SerializeField] Material outlinedText;
 
     public static Hud Instance { get; private set; }
+
+    /// <summary>
+    /// Set by the trailer director: hides the small status line under the big popups, the storm
+    /// warning and the countdown, so the trailer's own captions don't stack on top of them.
+    /// </summary>
+    public static bool TrailerMode;
+
+    /// <summary>True while a big popup (TOO HIGH, SMALL BLASTER!, TAKEDOWN!...) is on screen.</summary>
+    public bool PopupVisible => popupText != null && popupText.gameObject.activeSelf;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { TrailerMode = false; }
 
     const float DigitH = 74f;
     // The odometer frame art and where its painted windows, luck slot and padlock sit (canvas units).
@@ -221,12 +237,19 @@ public partial class Hud : MonoBehaviour
         if (player == null) TryBindPlayer();
         if (odometer != null) UpdateReels();
         UpdatePopup();
-        UpdateMarkers();
         UpdateCombatUI();
+        if (hintLine != null) hintLine.enabled = !TrailerMode;
         if (hudGroup != null) hudGroup.alpha = Mathf.MoveTowards(hudGroup.alpha, hudAlphaTarget, Time.unscaledDeltaTime * 2.5f);
         cheatLine.text = DebugCheats.Active
             ? "CHEATS  F2 chest numbers  F3 exact  F4 close  F5 spawn chest\nF6 arm enemies  F7 hurt me  F8 give me Jackpot  F9 kill nearest"
             : "";
+    }
+
+    void LateUpdate()
+    {
+        UpdateMarkers();
+        UpdateWorldBars();
+        UpdateDamageNumbers(Time.deltaTime);
     }
 
     void UpdateReels()
