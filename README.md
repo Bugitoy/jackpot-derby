@@ -2,7 +2,7 @@
 
 # Jackpot Derby
 
-**▶ Play it in your browser: [kingmayhem.itch.io/jackpot-derby](https://kingmayhem.itch.io/jackpot-derby)**
+Play it in your browser: [kingmayhem.itch.io/jackpot-derby](https://kingmayhem.itch.io/jackpot-derby)
 
 Four cars. One cartoon city.
 
@@ -68,12 +68,13 @@ The project uses the Universal Render Pipeline (URP), glTFast for the models and
 rival cars; Unity installs these packages automatically from `Packages/manifest.json`.
 
 ## Credits and AI disclosure
-Code written with Claude (Anthropic). Concept images were made with Google Nano Banana and 3D models were
-made with Tripo AI. Game design, direction and asset selection by Lefika.
+I handled all core gameplay and engine programming directly, leveraging modern AI coding assistants selectively to draft test suites, check edge-case coverage, and speed up boilerplate setup. 
+
+Concept images were made with Google Nano Banana and 3D models were made with Tripo AI. 
 
 Sound effects and music were synthesised in the Unity editor for this game.
 
-Font: **Poppins** by Indian Type Foundry & Jonny Pinhorn, SIL Open Font License 1.1.
+Font: Poppins by Indian Type Foundry & Jonny Pinhorn, SIL Open Font License 1.1.
 
 Made with Unity 6 (URP).
 
