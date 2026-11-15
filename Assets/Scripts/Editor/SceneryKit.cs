@@ -530,7 +530,8 @@ public static class SceneryKit
                 // The split-off wheels of parked cars are already the far version inside a LODGroup.
                 if (mesh.name.Contains("_wheel")) continue;
                 int limit = LodLimitFor(mesh.name);
-                if (mesh.lodCount > 1 && (limit < 0 || mesh.lodCount == limit + 1)) continue; // already right
+                bool rightCount = limit < 0 || mesh.lodCount == limit + 1;
+                if (mesh.lodCount > 1 && rightCount && !HasUnusedIndices(mesh)) continue; // already right
                 AddMeshLods(mesh);
             }
         }
@@ -571,12 +572,49 @@ public static class SceneryKit
     static void AddMeshLods(Mesh mesh)
     {
         if (mesh.name.Contains("_wheel")) return;
-        if (mesh.lodCount > 1) mesh.lodCount = 1; // regenerate from the full mesh
+        if (mesh.lodCount > 1) StripMeshLods(mesh); // regenerate from the full mesh
         long tris = 0;
         for (int i = 0; i < mesh.subMeshCount; i++) tris += mesh.GetIndexCount(i) / 3;
         if (tris < 512) return;
         MeshLodUtility.GenerateMeshLods(mesh, LodLimitFor(mesh.name));
         EditorUtility.SetDirty(mesh);
+    }
+
+    /// <summary>
+    /// Back to just the full-detail mesh. Setting lodCount = 1 alone keeps the old LOD triangles in the
+    /// index buffer (and GenerateMeshLods then appends after them), so the mesh is rebuilt from scratch.
+    /// </summary>
+    static void StripMeshLods(Mesh mesh)
+    {
+        mesh.lodCount = 1;
+        var v = mesh.vertices; var n = mesh.normals; var uv = mesh.uv; var tg = mesh.tangents;
+        var format = mesh.indexFormat;
+        var subs = new List<int[]>();
+        for (int s = 0; s < mesh.subMeshCount; s++) subs.Add(mesh.GetTriangles(s));
+        mesh.Clear();
+        mesh.indexFormat = format;
+        mesh.SetVertices(v);
+        mesh.SetNormals(n);
+        mesh.SetUVs(0, uv);
+        if (tg.Length == v.Length) mesh.SetTangents(tg);
+        mesh.subMeshCount = subs.Count;
+        for (int s = 0; s < subs.Count; s++) mesh.SetTriangles(subs[s], s, false);
+        mesh.RecalculateBounds();
+    }
+
+    /// <summary>True if the index buffer holds triangles no LOD level uses (left over from an older LOD set).</summary>
+    static bool HasUnusedIndices(Mesh mesh)
+    {
+        long used = 0;
+        for (int l = 0; l < mesh.lodCount; l++)
+            for (int s = 0; s < mesh.subMeshCount; s++) used += mesh.GetLod(s, l).indexCount;
+        var md = Mesh.AcquireReadOnlyMeshData(mesh);
+        try
+        {
+            int length = md[0].indexFormat == IndexFormat.UInt16 ? md[0].GetIndexData<ushort>().Length : md[0].GetIndexData<int>().Length;
+            return length > used;
+        }
+        finally { md.Dispose(); }
     }
 
     /// <summary>Spinning wheel pivots under a "Wheels" child, with a LODGroup: Lefika's wheel close up, the model's own wheel further away.</summary>
