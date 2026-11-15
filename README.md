@@ -4,10 +4,6 @@
 
 Play it in your browser: [kingmayhem.itch.io/jackpot-derby](https://kingmayhem.itch.io/jackpot-derby)
 
-<table>
-<tr>
-<td valign="top" width="55%">
-
 Four cars. One cartoon city.
 
 Every car's number is its **odometer**: it rolls like slot-machine reels as you drive. Chests drop into the
@@ -15,6 +11,16 @@ city with a hidden lucky number. Match it, ram the chest, and you win a **blaste
 anyone who gets close. Meanwhile the **Bad Luck Storm** closes in. **Last car standing wins.**
 
 Made for the **Unity Game Jam 2026**. Theme: **Lucky Number**.
+
+## Screenshots
+
+<p align="center"><img src="Docs/readme/title.jpg" alt="Title screen" width="100%"></p>
+<p align="center">
+<img src="Docs/readme/small_blaster.jpg" alt="Small Blaster from a chest" width="24%">
+<img src="Docs/readme/how_to_play.jpg" alt="How to Play" width="24%">
+<img src="Docs/readme/street.jpg" alt="Racing through the city" width="24%">
+<img src="Docs/readme/win.jpg" alt="First place" width="24%">
+</p>
 
 ## How the lucky number works
 - Your number runs from **1 to 100** and wraps around. Drive **forward** to count **up**, **reverse** to count **down**.
@@ -50,19 +56,6 @@ Made for the **Unity Game Jam 2026**. Theme: **Lucky Number**.
 | Esc | Pause (Graphics: Auto / High / Low is in the pause menu) |
 
 Best played on a desktop browser with a keyboard. The first load can take a moment.
-
-</td>
-<td valign="top" width="45%">
-
-<img src="Docs/readme/title.jpg" alt="Title screen" width="100%"><br><br>
-<img src="Docs/readme/small_blaster.jpg" alt="Small Blaster from a chest" width="100%"><br><br>
-<img src="Docs/readme/how_to_play.jpg" alt="How to Play" width="100%"><br><br>
-<img src="Docs/readme/street.jpg" alt="Racing through the city" width="100%"><br><br>
-<img src="Docs/readme/win.jpg" alt="First place" width="100%"><br><br>
-
-</td>
-</tr>
-</table>
 
 ## Running the project in Unity
 1. Install **Unity Hub** and **Unity 6000.6.8f1** (Unity 6) with **Web Build Support**.
